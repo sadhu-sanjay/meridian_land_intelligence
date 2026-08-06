@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
+import { useEffect, useRef, useState } from "react";
+import maplibregl from "maplibre-gl";
 
 // Adjust this to wherever your zoning_districts data actually sits.
 // (Defaulting to Whatcom County, WA to match the existing parcel sync setup.)
 const INITIAL_VIEW = { lng: -122.35, lat: 48.75, zoom: 10 };
-const LOCATION_LABEL = 'Whatcom County, WA — Chuckanut / Samish Corridor';
+const LOCATION_LABEL = "Whatcom County, WA — Chuckanut / Samish Corridor";
 
-const DEFAULT_COLOR = '#8FA08F';
-const SUBDIVISION_COLOR = '#9f5609';
+const DEFAULT_COLOR = "#8FA08F";
+const SUBDIVISION_COLOR = "#9f5609";
 
 // Parcels only render once you're zoomed in enough to make individual
 // boundaries/labels meaningful — below this it's just noise (and a lot
@@ -31,9 +31,9 @@ const MAX_COMPARE = 3;
 // underlying zoom-based visibility (zoning always on, parcels 13+,
 // subdivisions 11+) doesn't change, this just gets you there in one click.
 const MODES = {
-  zoning: { label: 'Zoning', zoom: 10.5 },
-  subdivisions: { label: 'Subdivisions', zoom: 12.5 },
-  parcels: { label: 'Parcels', zoom: 15 },
+  zoning: { label: "Zoning", zoom: 10.5 },
+  subdivisions: { label: "Subdivisions", zoom: 12.5 },
+  parcels: { label: "Parcels", zoom: 15 },
 };
 
 // Deterministic, maximally-spread color per index using the golden-angle
@@ -46,9 +46,12 @@ function colorForIndex(i) {
 }
 
 function boundsOfGeometry(geometry) {
-  let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+  let minLng = Infinity,
+    minLat = Infinity,
+    maxLng = -Infinity,
+    maxLat = -Infinity;
   const walk = (coords) => {
-    if (typeof coords[0] === 'number') {
+    if (typeof coords[0] === "number") {
       const [lng, lat] = coords;
       if (lng < minLng) minLng = lng;
       if (lng > maxLng) maxLng = lng;
@@ -60,11 +63,14 @@ function boundsOfGeometry(geometry) {
   };
   walk(geometry.coordinates);
   if (!Number.isFinite(minLng)) return null;
-  return [[minLng, minLat], [maxLng, maxLat]];
+  return [
+    [minLng, minLat],
+    [maxLng, maxLat],
+  ];
 }
 
 function fmtAcres(n) {
-  return Number.isFinite(Number(n)) ? `${Number(n).toFixed(2)} ac` : '—';
+  return Number.isFinite(Number(n)) ? `${Number(n).toFixed(2)} ac` : "—";
 }
 
 export default function Page() {
@@ -74,18 +80,24 @@ export default function Page() {
   const [selected, setSelected] = useState(null); // drawer contents
   const [loadError, setLoadError] = useState(null);
   const [legend, setLegend] = useState([]); // [{ code, desc, color }]
-  const [mode, setMode] = useState('zoning');
-  const [zoneFilter, setZoneFilter] = useState('all');
+  const [mode, setMode] = useState("zoning");
+  const [zoneFilter, setZoneFilter] = useState("all");
   const [minAcreage, setMinAcreage] = useState(0);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [searchError, setSearchError] = useState(null);
-  const [stats, setStats] = useState({ inView: 0, avgAcreage: null, loaded: 0 });
+  const [stats, setStats] = useState({
+    inView: 0,
+    avgAcreage: null,
+    loaded: 0,
+  });
   const [ranked, setRanked] = useState([]);
   const [compareItems, setCompareItems] = useState([]); // parcel summaries
   const [compareOpen, setCompareOpen] = useState(false);
 
   const minAcreageRef = useRef(minAcreage);
-  useEffect(() => { minAcreageRef.current = minAcreage; }, [minAcreage]);
+  useEffect(() => {
+    minAcreageRef.current = minAcreage;
+  }, [minAcreage]);
 
   const zoneColor = (code) => colorMapRef.current.get(code) || DEFAULT_COLOR;
   const zoneDesc = (code) => legend.find((z) => z.code === code)?.desc;
@@ -96,10 +108,10 @@ export default function Page() {
   // updates the legend list.
   const refreshZoneColors = () => {
     const map = mapRef.current;
-    if (!map || !map.getLayer('zoning-fill')) return;
+    if (!map || !map.getLayer("zoning-fill")) return;
 
-    const features = map.querySourceFeatures('zoning', {
-      sourceLayer: 'zoning_districts',
+    const features = map.querySourceFeatures("zoning", {
+      sourceLayer: "zoning_districts",
     });
 
     const descByCode = new Map();
@@ -119,19 +131,19 @@ export default function Page() {
     }
     if (!added && legend.length > 0) return; // nothing new, skip re-render
 
-    const matchExpr = ['match', ['get', 'zone_code']];
+    const matchExpr = ["match", ["get", "zone_code"]];
     for (const [code, color] of colorMap.entries()) {
       matchExpr.push(code, color);
     }
     matchExpr.push(DEFAULT_COLOR);
 
-    map.setPaintProperty('zoning-fill', 'fill-color', matchExpr);
-    map.setPaintProperty('zoning-outline', 'line-color', matchExpr);
+    map.setPaintProperty("zoning-fill", "fill-color", matchExpr);
+    map.setPaintProperty("zoning-outline", "line-color", matchExpr);
 
     setLegend(
       [...colorMap.entries()]
         .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([code, color]) => ({ code, color, desc: descByCode.get(code) }))
+        .map(([code, color]) => ({ code, color, desc: descByCode.get(code) })),
     );
   };
 
@@ -139,19 +151,22 @@ export default function Page() {
   // ranked-parcels list, respecting the current min-acreage filter.
   const refreshParcelStats = () => {
     const map = mapRef.current;
-    if (!map || !map.getLayer('parcels-fill')) return;
+    if (!map || !map.getLayer("parcels-fill")) return;
 
     const minAc = minAcreageRef.current;
 
-    const rendered = map.queryRenderedFeatures({ layers: ['parcels-fill'] });
-    const loadedAll = map.querySourceFeatures('parcels', { sourceLayer: 'parcels' });
+    const rendered = map.queryRenderedFeatures({ layers: ["parcels-fill"] });
+    const loadedAll = map.querySourceFeatures("parcels", {
+      sourceLayer: "parcels",
+    });
 
     const dedupe = (feats) => {
       const byId = new Map();
       for (const f of feats) {
         const acreage = Number(f.properties?.acreage);
         if (Number.isFinite(acreage) && acreage < minAc) continue;
-        const key = f.id ?? f.properties?.geo_id ?? JSON.stringify(f.properties);
+        const key =
+          f.id ?? f.properties?.geo_id ?? JSON.stringify(f.properties);
         if (!byId.has(key)) byId.set(key, f);
       }
       return [...byId.values()];
@@ -167,12 +182,18 @@ export default function Page() {
       ? acreages.reduce((a, b) => a + b, 0) / acreages.length
       : null;
 
-    setStats({ inView: inViewFeatures.length, avgAcreage, loaded: loadedFeatures.length });
+    setStats({
+      inView: inViewFeatures.length,
+      avgAcreage,
+      loaded: loadedFeatures.length,
+    });
 
     setRanked(
       inViewFeatures
         .filter((f) => Number.isFinite(Number(f.properties?.acreage)))
-        .sort((a, b) => Number(b.properties.acreage) - Number(a.properties.acreage))
+        .sort(
+          (a, b) => Number(b.properties.acreage) - Number(a.properties.acreage),
+        )
         .slice(0, 25)
         .map((f) => ({
           propId: f.properties.prop_id,
@@ -181,40 +202,43 @@ export default function Page() {
           zoning: f.properties.zoning,
           acreage: f.properties.acreage,
           geometry: f.geometry,
-        }))
+        })),
     );
   };
 
   const applyParcelFilter = () => {
     const map = mapRef.current;
-    if (!map || !map.getLayer('parcels-fill')) return;
+    if (!map || !map.getLayer("parcels-fill")) return;
     const minAc = minAcreageRef.current;
-    const filter = minAc > 0 ? ['>=', ['coalesce', ['get', 'acreage'], 0], minAc] : null;
-    map.setFilter('parcels-fill', filter);
-    map.setFilter('parcels-outline', filter);
-    map.setFilter('parcels-label', filter);
+    const filter =
+      minAc > 0 ? [">=", ["coalesce", ["get", "acreage"], 0], minAc] : null;
+    map.setFilter("parcels-fill", filter);
+    map.setFilter("parcels-outline", filter);
+    map.setFilter("parcels-label", filter);
     refreshParcelStats();
   };
 
   const applyZoneFilter = (code) => {
     const map = mapRef.current;
-    if (!map || !map.getLayer('zoning-fill')) return;
-    const filter = code && code !== 'all' ? ['==', ['get', 'zone_code'], code] : null;
-    map.setFilter('zoning-fill', filter);
-    map.setFilter('zoning-outline', filter);
-    map.setFilter('zoning-label', filter);
+    if (!map || !map.getLayer("zoning-fill")) return;
+    const filter =
+      code && code !== "all" ? ["==", ["get", "zone_code"], code] : null;
+    map.setFilter("zoning-fill", filter);
+    map.setFilter("zoning-outline", filter);
+    map.setFilter("zoning-label", filter);
   };
 
   const flyToFeature = (feature) => {
     const map = mapRef.current;
     if (!map || !feature?.geometry) return;
     const bounds = boundsOfGeometry(feature.geometry);
-    if (bounds) map.fitBounds(bounds, { padding: 120, maxZoom: 17, duration: 600 });
+    if (bounds)
+      map.fitBounds(bounds, { padding: 120, maxZoom: 17, duration: 600 });
   };
 
   const openParcelDrawer = (props) => {
     setSelected({
-      kind: 'parcel',
+      kind: "parcel",
       propId: props.prop_id ?? props.propId,
       geoId: props.geo_id ?? props.geoId,
       name: props.name,
@@ -264,27 +288,33 @@ export default function Page() {
     if (!map || !query) return;
 
     // Try a zone code match first.
-    const zoneMatch = legend.find((z) => z.code.toLowerCase() === query.toLowerCase());
+    const zoneMatch = legend.find(
+      (z) => z.code.toLowerCase() === query.toLowerCase(),
+    );
     if (zoneMatch) {
       setZoneFilter(zoneMatch.code);
       applyZoneFilter(zoneMatch.code);
-      handleModeChange('zoning');
+      handleModeChange("zoning");
       return;
     }
 
     // Otherwise search loaded parcels by prop_id (substring, case-insensitive).
-    const parcelFeatures = map.querySourceFeatures('parcels', { sourceLayer: 'parcels' });
+    const parcelFeatures = map.querySourceFeatures("parcels", {
+      sourceLayer: "parcels",
+    });
     const hit = parcelFeatures.find((f) =>
-      String(f.properties?.prop_id ?? '').toLowerCase().includes(query.toLowerCase())
+      String(f.properties?.prop_id ?? "")
+        .toLowerCase()
+        .includes(query.toLowerCase()),
     );
     if (hit) {
       openParcelDrawer(hit.properties);
-      handleModeChange('parcels');
+      handleModeChange("parcels");
       flyToFeature(hit);
       return;
     }
 
-    setSearchError('No loaded parcel or zone matches that search.');
+    setSearchError("No loaded parcel or zone matches that search.");
   };
 
   useEffect(() => {
@@ -297,27 +327,32 @@ export default function Page() {
         // Required for any layer using a symbol "text-field" (both label
         // layers below) — without this MapLibre throws
         // "layout.text-field requires glyphs" and labels never render.
-        glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
+        glyphs: "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf",
         sources: {
-          'esri-imagery': {
-            type: 'raster',
+          "esri-imagery": {
+            type: "raster",
             tiles: [
-              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+              "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
             ],
             tileSize: 256,
-            attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
+            attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics",
           },
-          'esri-boundaries': {
-            type: 'raster',
+          "esri-boundaries": {
+            type: "raster",
             tiles: [
-              'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+              "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
             ],
             tileSize: 256,
           },
         },
         layers: [
-          { id: 'basemap', type: 'raster', source: 'esri-imagery' },
-          { id: 'boundaries', type: 'raster', source: 'esri-boundaries', paint: { 'raster-opacity': 0.85 } },
+          { id: "basemap", type: "raster", source: "esri-imagery" },
+          {
+            id: "boundaries",
+            type: "raster",
+            source: "esri-boundaries",
+            paint: { "raster-opacity": 0.85 },
+          },
         ],
       },
       center: [INITIAL_VIEW.lng, INITIAL_VIEW.lat],
@@ -325,78 +360,78 @@ export default function Page() {
     });
 
     mapRef.current = map;
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
 
-    map.on('load', () => {
-      map.addSource('zoning', {
-        type: 'vector',
+    map.on("load", () => {
+      map.addSource("zoning", {
+        type: "vector",
         tiles: [`${window.location.origin}/api/tiles/zoning/{z}/{x}/{y}.pbf`],
         minzoom: 0,
         maxzoom: 12,
       });
 
       map.addLayer({
-        id: 'zoning-fill',
-        type: 'fill',
-        source: 'zoning',
+        id: "zoning-fill",
+        type: "fill",
+        source: "zoning",
         maxzoom: 13.5,
-        'source-layer': 'zoning_districts',
+        "source-layer": "zoning_districts",
         paint: {
-          'fill-color': DEFAULT_COLOR, // replaced with a per-zone match expr once tiles load
-          'fill-opacity': 0.5,
+          "fill-color": DEFAULT_COLOR, // replaced with a per-zone match expr once tiles load
+          "fill-opacity": 0.5,
         },
       });
 
       map.addLayer({
-        id: 'zoning-outline',
-        type: 'line',
-        source: 'zoning',
-        'source-layer': 'zoning_districts',
+        id: "zoning-outline",
+        type: "line",
+        source: "zoning",
+        "source-layer": "zoning_districts",
         paint: {
-          'line-color': '#efe7d2',
-          'line-width': 1,
-          'line-opacity': 0.7,
+          "line-color": "#efe7d2",
+          "line-width": 1,
+          "line-opacity": 0.7,
         },
       });
 
       map.addLayer({
-        id: 'zoning-label',
-        type: 'symbol',
-        source: 'zoning',
-        'source-layer': 'zoning_districts',
+        id: "zoning-label",
+        type: "symbol",
+        source: "zoning",
+        "source-layer": "zoning_districts",
         minzoom: ZONE_LABEL_MIN_ZOOM,
         layout: {
-          'text-field': ['get', 'zone_code'],
-          'text-size': 12,
-          'text-font': ['Noto Sans Regular'],
+          "text-field": ["get", "zone_code"],
+          "text-size": 12,
+          "text-font": ["Noto Sans Regular"],
         },
         paint: {
-          'text-color': '#efe7d2',
-          'text-halo-color': '#141c17',
-          'text-halo-width': 1.2,
+          "text-color": "#efe7d2",
+          "text-halo-color": "#141c17",
+          "text-halo-width": 1.2,
         },
       });
 
       // --- Parcels ---
-      map.addSource('parcels', {
-        type: 'vector',
+      map.addSource("parcels", {
+        type: "vector",
         tiles: [`${window.location.origin}/api/tiles/parcels/{z}/{x}/{y}.pbf`],
         minzoom: PARCEL_MIN_ZOOM,
         maxzoom: 22,
-        promoteId: 'id',
+        promoteId: "id",
       });
 
       map.addLayer({
-        id: 'parcels-fill',
-        type: 'fill',
-        source: 'parcels',
-        'source-layer': 'parcels',
+        id: "parcels-fill",
+        type: "fill",
+        source: "parcels",
+        "source-layer": "parcels",
         minzoom: PARCEL_MIN_ZOOM,
         paint: {
-          'fill-color': '#c9922f',
-          'fill-opacity': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
+          "fill-color": "#c9922f",
+          "fill-opacity": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
             0.55,
             0.16,
           ],
@@ -404,128 +439,146 @@ export default function Page() {
       });
 
       map.addLayer({
-        id: 'parcels-outline',
-        type: 'line',
-        source: 'parcels',
-        'source-layer': 'parcels',
+        id: "parcels-outline",
+        type: "line",
+        source: "parcels",
+        "source-layer": "parcels",
         minzoom: PARCEL_MIN_ZOOM,
         paint: {
-          'line-color': '#efe7d2',
-          'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 3, 1.1],
+          "line-color": "#efe7d2",
+          "line-width": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            3,
+            1.1,
+          ],
         },
       });
 
       map.addLayer({
-        id: 'parcels-label',
-        type: 'symbol',
-        source: 'parcels',
-        'source-layer': 'parcels',
+        id: "parcels-label",
+        type: "symbol",
+        source: "parcels",
+        "source-layer": "parcels",
         minzoom: PARCEL_LABEL_MIN_ZOOM,
         layout: {
-          'text-field': ['get', 'prop_id'],
-          'text-size': 11,
-          'text-font': ['Noto Sans Regular'],
+          "text-field": ["get", "prop_id"],
+          "text-size": 11,
+          "text-font": ["Noto Sans Regular"],
         },
         paint: {
-          'text-color': '#efe7d2',
-          'text-halo-color': '#141c17',
-          'text-halo-width': 1.2,
+          "text-color": "#efe7d2",
+          "text-halo-color": "#141c17",
+          "text-halo-width": 1.2,
         },
       });
 
       // --- Subdivisions ---
-      map.addSource('subdivisions', {
-        type: 'vector',
-        tiles: [`${window.location.origin}/api/tiles/subdivisions/{z}/{x}/{y}.pbf`],
+      map.addSource("subdivisions", {
+        type: "vector",
+        tiles: [
+          `${window.location.origin}/api/tiles/subdivisions/{z}/{x}/{y}.pbf`,
+        ],
         minzoom: SUBDIVISION_MIN_ZOOM,
         maxzoom: 16,
       });
 
       map.addLayer({
-        id: 'subdivisions-fill',
-        type: 'fill',
-        source: 'subdivisions',
-        'source-layer': 'subdivisions',
+        id: "subdivisions-fill",
+        type: "fill",
+        source: "subdivisions",
+        "source-layer": "subdivisions",
         minzoom: SUBDIVISION_MIN_ZOOM,
         paint: {
-          'fill-color': SUBDIVISION_COLOR,
-          'fill-opacity': 0.2,
+          "fill-color": SUBDIVISION_COLOR,
+          "fill-opacity": 0.2,
         },
       });
 
       map.addLayer({
-        id: 'subdivisions-outline',
-        type: 'line',
-        source: 'subdivisions',
-        'source-layer': 'subdivisions',
+        id: "subdivisions-outline",
+        type: "line",
+        source: "subdivisions",
+        "source-layer": "subdivisions",
         minzoom: SUBDIVISION_MIN_ZOOM,
         paint: {
-          'line-color': SUBDIVISION_COLOR,
-          'line-width': 2.5,
+          "line-color": SUBDIVISION_COLOR,
+          "line-width": 2.5,
         },
       });
 
       map.addLayer({
-        id: 'subdivisions-label',
-        type: 'symbol',
-        source: 'subdivisions',
-        'source-layer': 'subdivisions',
+        id: "subdivisions-label",
+        type: "symbol",
+        source: "subdivisions",
+        "source-layer": "subdivisions",
         minzoom: SUBDIVISION_LABEL_MIN_ZOOM,
         layout: {
-          'text-field': ['get', 'subdivision_name'],
-          'text-size': 11,
-          'text-font': ['Noto Sans Regular'],
+          "text-field": ["get", "subdivision_name"],
+          "text-size": 11,
+          "text-font": ["Noto Sans Regular"],
         },
         paint: {
-          'text-color': '#d9c9ea',
-          'text-halo-color': '#141c17',
-          'text-halo-width': 1.2,
+          "text-color": "#d9c9ea",
+          "text-halo-color": "#141c17",
+          "text-halo-width": 1.2,
         },
       });
 
-      map.on('click', 'subdivisions-fill', (e) => {
-        const feature = e.features?.[0];
-        if (!feature) return;
-        setSelected({
-          kind: 'subdivision',
-          name: feature.properties.name,
-          subdivisionName: feature.properties.subdivision_name,
-          platNumber: feature.properties.plat_number,
-          acreage: feature.properties.acreage,
-        });
-      });
-      map.on('mouseenter', 'subdivisions-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
-      map.on('mouseleave', 'subdivisions-fill', () => { map.getCanvas().style.cursor = ''; });
+      // --- Interactivity ---
+      map.on("click", (e) => {
+        const layers = ["zoning-fill", "subdivisions-fill", "parcels-fill"];
+        const features = map.queryRenderedFeatures(e.point, { layers });
 
-      map.on('click', 'parcels-fill', (e) => {
-        const feature = e.features?.[0];
-        if (!feature) return;
-        openParcelDrawer(feature.properties);
-      });
-      map.on('mouseenter', 'parcels-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
-      map.on('mouseleave', 'parcels-fill', () => { map.getCanvas().style.cursor = ''; });
+        const topFeature = [...features].sort(
+          (a, b) => layers.indexOf(b.layer.id) - layers.indexOf(a.layer.id),
+        )[0];
 
-      map.on('click', 'zoning-fill', (e) => {
-        const feature = e.features?.[0];
-        if (!feature) return;
-        setSelected({
-          kind: 'zoning',
-          zone_code: feature.properties.zone_code,
-          zone_desc: feature.properties.zone_desc,
-          acres: feature.properties.acres,
-        });
+        if (!topFeature) return;
+
+        if (topFeature.layer.id === "parcels-fill") {
+          openParcelDrawer(topFeature.properties);
+        } else if (topFeature.layer.id === "subdivisions-fill") {
+          setSelected({
+            kind: "subdivision",
+            name: topFeature.properties.name,
+            subdivisionName: topFeature.properties.subdivision_name,
+            platNumber: topFeature.properties.plat_number,
+            acreage: topFeature.properties.acreage,
+          });
+        } else if (topFeature.layer.id === "zoning-fill") {
+          setSelected({
+            kind: "zoning",
+            zone_code: topFeature.properties.zone_code,
+            zone_desc: topFeature.properties.zone_desc,
+            acres: topFeature.properties.acres,
+          });
+        }
       });
-      map.on('mouseenter', 'zoning-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
-      map.on('mouseleave', 'zoning-fill', () => { map.getCanvas().style.cursor = ''; });
+
+      map.on(
+        "mouseenter",
+        ["subdivisions-fill", "parcels-fill", "zoning-fill"],
+        () => {
+          map.getCanvas().style.cursor = "pointer";
+        },
+      );
+      map.on(
+        "mouseleave",
+        ["subdivisions-fill", "parcels-fill", "zoning-fill"],
+        () => {
+          map.getCanvas().style.cursor = "";
+        },
+      );
 
       // Re-derive the zone_code -> color legend and the parcel stat tiles
       // whenever new tiles have finished loading (pan/zoom reveals new
       // features, initial load, etc).
-      map.on('idle', refreshZoneColors);
-      map.on('idle', refreshParcelStats);
+      map.on("idle", refreshZoneColors);
+      map.on("idle", refreshParcelStats);
     });
 
-    map.on('error', (e) => {
+    map.on("error", (e) => {
       // Surfaces tile/network errors (e.g. DB not reachable) in the UI
       // instead of failing silently.
       if (e?.error?.message) setLoadError(e.error.message);
@@ -542,14 +595,17 @@ export default function Page() {
   // and closes, without re-adding layers or losing the current viewport.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.getSource('parcels')) return;
-    map.removeFeatureState({ source: 'parcels', sourceLayer: 'parcels' });
-    if (selected?.kind === 'parcel') {
+    if (!map || !map.getSource("parcels")) return;
+    map.removeFeatureState({ source: "parcels", sourceLayer: "parcels" });
+    if (selected?.kind === "parcel") {
       const hit = map
-        .querySourceFeatures('parcels', { sourceLayer: 'parcels' })
+        .querySourceFeatures("parcels", { sourceLayer: "parcels" })
         .find((f) => f.properties?.geo_id === selected.geoId);
       if (hit?.id != null) {
-        map.setFeatureState({ source: 'parcels', sourceLayer: 'parcels', id: hit.id }, { selected: true });
+        map.setFeatureState(
+          { source: "parcels", sourceLayer: "parcels", id: hit.id },
+          { selected: true },
+        );
       }
     }
   }, [selected]);
@@ -589,7 +645,7 @@ export default function Page() {
                 <button
                   key={key}
                   type="button"
-                  className={mode === key ? 'active' : ''}
+                  className={mode === key ? "active" : ""}
                   onClick={() => handleModeChange(key)}
                 >
                   {m.label}
@@ -613,7 +669,7 @@ export default function Page() {
                 {legend.map((z) => (
                   <option key={z.code} value={z.code}>
                     {z.code}
-                    {z.desc ? ` — ${z.desc}` : ''}
+                    {z.desc ? ` — ${z.desc}` : ""}
                   </option>
                 ))}
               </select>
@@ -638,7 +694,9 @@ export default function Page() {
                 <span>In view</span>
               </div>
               <div>
-                <b>{stats.avgAcreage != null ? stats.avgAcreage.toFixed(1) : '—'}</b>
+                <b>
+                  {stats.avgAcreage != null ? stats.avgAcreage.toFixed(1) : "—"}
+                </b>
                 <span>Avg Acres</span>
               </div>
               <div>
@@ -648,21 +706,27 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="sidebar-section" style={{ paddingBottom: 8, borderBottom: 'none' }}>
+          <div
+            className="sidebar-section"
+            style={{ paddingBottom: 8, borderBottom: "none" }}
+          >
             <p className="eyebrow">Ranked Parcels</p>
           </div>
           <div className="list">
             {ranked.length === 0 ? (
-              <p className="empty-note">No parcels match these filters in view.</p>
+              <p className="empty-note">
+                No parcels match these filters in view.
+              </p>
             ) : (
               ranked.map((p) => {
                 const color = zoneColor(p.zoning);
                 const desc = zoneDesc(p.zoning);
-                const isSelected = selected?.kind === 'parcel' && selected.geoId === p.geoId;
+                const isSelected =
+                  selected?.kind === "parcel" && selected.geoId === p.geoId;
                 return (
                   <div
                     key={p.geoId ?? p.propId}
-                    className={`card ${isSelected ? 'selected' : ''}`}
+                    className={`card ${isSelected ? "selected" : ""}`}
                     onClick={() => handleSelectRanked(p)}
                   >
                     <input
@@ -675,18 +739,21 @@ export default function Page() {
                     />
                     <div className="card-top">
                       <div>
-                        <h3>{p.name || 'Unnamed parcel'}</h3>
+                        <h3>{p.name || "Unnamed parcel"}</h3>
                         <p className="card-loc">{p.geoId}</p>
                       </div>
-                      <div className="score-chip" style={{ background: color }} />
+                      <div
+                        className="score-chip"
+                        style={{ background: color }}
+                      />
                     </div>
                     <div className="card-meta">
                       <span>{fmtAcres(p.acreage)}</span>
-                      <span>{p.zoning || '—'}</span>
+                      <span>{p.zoning || "—"}</span>
                     </div>
                     <span className="grade-label" style={{ color }}>
-                      {p.zoning || 'Unzoned'}
-                      {desc ? ` · ${desc}` : ''}
+                      {p.zoning || "Unzoned"}
+                      {desc ? ` · ${desc}` : ""}
                     </span>
                   </div>
                 );
@@ -694,9 +761,15 @@ export default function Page() {
             )}
           </div>
 
-          <div className={`compare-bar ${compareItems.length > 0 ? 'show' : ''}`}>
-            <span>{compareItems.length} selected (max {MAX_COMPARE})</span>
-            <button onClick={() => setCompareOpen(true)}>Compare parcels →</button>
+          <div
+            className={`compare-bar ${compareItems.length > 0 ? "show" : ""}`}
+          >
+            <span>
+              {compareItems.length} selected (max {MAX_COMPARE})
+            </span>
+            <button onClick={() => setCompareOpen(true)}>
+              Compare parcels →
+            </button>
           </div>
         </aside>
 
@@ -719,77 +792,131 @@ export default function Page() {
               ))}
             </div>
           )} */}
-
         </div>
 
-        <div className={`drawer ${selected ? 'open' : ''}`}>
-          {selected?.kind === 'parcel' && (
+        <div className={`drawer ${selected ? "open" : ""}`}>
+          {selected?.kind === "parcel" && (
             <>
               <div className="drawer-head">
-                <button className="drawer-close" onClick={closeDrawer}>✕</button>
+                <button className="drawer-close" onClick={closeDrawer}>
+                  ✕
+                </button>
                 <p className="drawer-eyebrow">Parcel Dossier</p>
-                <h2>{selected.name || 'Unnamed parcel'}</h2>
+                <h2>{selected.name || "Unnamed parcel"}</h2>
                 <p className="sub">
-                  {selected.geoId} · {fmtAcres(selected.acreage)} · {selected.zoning || '—'}
+                  {selected.geoId} · {fmtAcres(selected.acreage)} ·{" "}
+                  {selected.zoning || "—"}
                 </p>
               </div>
               <div className="drawer-block">
                 <h4>Parcel Facts</h4>
                 <div className="kv-grid">
-                  <div><b>Acreage</b>{fmtAcres(selected.acreage)}</div>
-                  <div><b>Zoning</b>{zoneDesc(selected.zoning) || selected.zoning || '—'}</div>
-                  <div><b>Prop ID</b>{selected.propId || '—'}</div>
-                  <div><b>Geo ID</b>{selected.geoId || '—'}</div>
+                  <div>
+                    <b>Acreage</b>
+                    {fmtAcres(selected.acreage)}
+                  </div>
+                  <div>
+                    <b>Zoning</b>
+                    {zoneDesc(selected.zoning) || selected.zoning || "—"}
+                  </div>
+                  <div>
+                    <b>Prop ID</b>
+                    {selected.propId || "—"}
+                  </div>
+                  <div>
+                    <b>Geo ID</b>
+                    {selected.geoId || "—"}
+                  </div>
                 </div>
               </div>
               <div className="drawer-actions">
-                <button className="btn-primary" onClick={() => toggleCompare(selected)}>
-                  {isComparing(selected.geoId) ? 'Remove from compare' : 'Add to compare'}
+                <button
+                  className="btn-primary"
+                  onClick={() => toggleCompare(selected)}
+                >
+                  {isComparing(selected.geoId)
+                    ? "Remove from compare"
+                    : "Add to compare"}
                 </button>
-                <button className="btn-ghost" onClick={closeDrawer}>Close</button>
+                <button className="btn-ghost" onClick={closeDrawer}>
+                  Close
+                </button>
               </div>
             </>
           )}
 
-           {selected?.kind === 'zoning' && (
+          {selected?.kind === "zoning" && (
             <>
               <div className="drawer-head">
-                <button className="drawer-close" onClick={closeDrawer}>✕</button>
+                <button className="drawer-close" onClick={closeDrawer}>
+                  ✕
+                </button>
                 <p className="drawer-eyebrow">Zoning District</p>
-                <h2 style={{ color: zoneColor(selected.zone_code) }}>{selected.zone_code || 'Unknown zone'}</h2>
-                <p className="sub">{selected.zone_desc || '—'}</p>
+                <h2 style={{ color: zoneColor(selected.zone_code) }}>
+                  {selected.zone_code || "Unknown zone"}
+                </h2>
+                <p className="sub">{selected.zone_desc || "—"}</p>
               </div>
               <div className="drawer-block">
                 <h4>District Facts</h4>
                 <div className="kv-grid">
-                  <div><b>Zone Code</b>{selected.zone_code || '—'}</div>
-                  <div><b>Comp Plan</b>{selected.zone_desc || '—'}</div>
-                  <div><b>Acreage</b>{selected.acres != null ? `${Number(selected.acres).toFixed(1)} ac` : '—'}</div>
+                  <div>
+                    <b>Zone Code</b>
+                    {selected.zone_code || "—"}
+                  </div>
+                  <div>
+                    <b>Comp Plan</b>
+                    {selected.zone_desc || "—"}
+                  </div>
+                  <div>
+                    <b>Acreage</b>
+                    {selected.acres != null
+                      ? `${Number(selected.acres).toFixed(1)} ac`
+                      : "—"}
+                  </div>
                 </div>
               </div>
               <div className="drawer-actions">
-                <button className="btn-ghost" onClick={closeDrawer}>Close</button>
+                <button className="btn-ghost" onClick={closeDrawer}>
+                  Close
+                </button>
               </div>
             </>
-          )} 
+          )}
 
-          {selected?.kind === 'subdivision' && (
+          {selected?.kind === "subdivision" && (
             <>
               <div className="drawer-head">
-                <button className="drawer-close" onClick={closeDrawer}>✕</button>
+                <button className="drawer-close" onClick={closeDrawer}>
+                  ✕
+                </button>
                 <p className="drawer-eyebrow">Subdivision</p>
-                <h2>{selected.subdivisionName || selected.name || 'Unknown subdivision'}</h2>
-                <p className="sub">{selected.platNumber ? `Plat #${selected.platNumber}` : '—'}</p>
+                <h2>
+                  {selected.subdivisionName ||
+                    selected.name ||
+                    "Unknown subdivision"}
+                </h2>
+                <p className="sub">
+                  {selected.platNumber ? `Plat #${selected.platNumber}` : "—"}
+                </p>
               </div>
               <div className="drawer-block">
                 <h4>Subdivision Facts</h4>
                 <div className="kv-grid">
-                  <div><b>Acreage</b>{fmtAcres(selected.acreage)}</div>
-                  <div><b>Plat #</b>{selected.platNumber || '—'}</div>
+                  <div>
+                    <b>Acreage</b>
+                    {fmtAcres(selected.acreage)}
+                  </div>
+                  <div>
+                    <b>Plat #</b>
+                    {selected.platNumber || "—"}
+                  </div>
                 </div>
               </div>
               <div className="drawer-actions">
-                <button className="btn-ghost" onClick={closeDrawer}>Close</button>
+                <button className="btn-ghost" onClick={closeDrawer}>
+                  Close
+                </button>
               </div>
             </>
           )}
@@ -799,34 +926,53 @@ export default function Page() {
       {compareOpen && (
         <div
           className="modal-backdrop show"
-          onClick={(e) => { if (e.target === e.currentTarget) setCompareOpen(false); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setCompareOpen(false);
+          }}
         >
           <div className="modal">
-            <button className="modal-close" onClick={() => setCompareOpen(false)}>✕</button>
+            <button
+              className="modal-close"
+              onClick={() => setCompareOpen(false)}
+            >
+              ✕
+            </button>
             <h2>Side-by-side comparison</h2>
             <p className="sub">
-              Comparing {compareItems.length} parcel{compareItems.length === 1 ? '' : 's'} from the live PostGIS dataset.
+              Comparing {compareItems.length} parcel
+              {compareItems.length === 1 ? "" : "s"} from the live PostGIS
+              dataset.
             </p>
             {compareItems.length === 0 ? (
-              <p className="empty-note">No parcels selected yet — check a box on a card to add one.</p>
+              <p className="empty-note">
+                No parcels selected yet — check a box on a card to add one.
+              </p>
             ) : (
               <table className="compare-table">
                 <tbody>
                   <tr>
                     <th>Parcel</th>
-                    {compareItems.map((c) => <th key={c.geoId}>{c.name || c.geoId}</th>)}
+                    {compareItems.map((c) => (
+                      <th key={c.geoId}>{c.name || c.geoId}</th>
+                    ))}
                   </tr>
                   <tr>
                     <td className="rowlabel">Acreage</td>
-                    {compareItems.map((c) => <td key={c.geoId}>{fmtAcres(c.acreage)}</td>)}
+                    {compareItems.map((c) => (
+                      <td key={c.geoId}>{fmtAcres(c.acreage)}</td>
+                    ))}
                   </tr>
                   <tr>
                     <td className="rowlabel">Zoning</td>
-                    {compareItems.map((c) => <td key={c.geoId}>{c.zoning || '—'}</td>)}
+                    {compareItems.map((c) => (
+                      <td key={c.geoId}>{c.zoning || "—"}</td>
+                    ))}
                   </tr>
                   <tr>
                     <td className="rowlabel">Prop ID</td>
-                    {compareItems.map((c) => <td key={c.geoId}>{c.propId || '—'}</td>)}
+                    {compareItems.map((c) => (
+                      <td key={c.geoId}>{c.propId || "—"}</td>
+                    ))}
                   </tr>
                 </tbody>
               </table>
@@ -1016,7 +1162,7 @@ export default function Page() {
           border-radius: 3px;
           outline: none;
         }
-        .filterrow input[type='range'] {
+        .filterrow input[type="range"] {
           flex: 1;
           accent-color: var(--ochre);
         }
@@ -1082,7 +1228,9 @@ export default function Page() {
           cursor: pointer;
           border: 1.5px solid transparent;
           position: relative;
-          transition: transform 0.12s ease, border-color 0.12s ease;
+          transition:
+            transform 0.12s ease,
+            border-color 0.12s ease;
         }
         .card:hover {
           transform: translateY(-1px);
