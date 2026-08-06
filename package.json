@@ -1,18 +1,33 @@
 {
-  "name": "zoning-viewer",
+  "name": "parcel-viewer",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:migrate": "node --env-file=.env db/run-sql.js schema.sql",
+    "db:zones": "node --env-file=.env db/run-sql.js build-zoning-districts.sql",
+    "db:sync-zoning": "node db/sync-zoning.js",
+    "db:sync-parcels": "node db/sync-parcels.js",
+    "db:inspect-parcel-fields": "node db/inspect-parcel-fields.js",
+    "db:seed": "node --env-file=.env db/seed.js",
+    "db:sync-parcels-polygon": "node --env-file=.env db/sync-parcels-polygon.js"
   },
   "dependencies": {
-    "next": "14.2.5",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "maplibre-gl": "^4.7.1",
+    "next": "^14.2.5",
     "pg": "^8.12.0",
-    "maplibre-gl": "^4.5.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "@types/pg": "^8.11.6",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.5.3"
   }
 }

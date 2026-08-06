@@ -1,16 +1,61 @@
+/* Meridian "survey ledger" palette — matches the pitch-deck demo
+   (paper/ink, Fraunces display type, IBM Plex body/mono). Component
+   layout styling lives in page.js via styled-jsx; this file just sets
+   the shared variables + base reset that need to be global. */
+:root {
+  --ink: #141c17;
+  --ink-2: #1e2a22;
+  --ink-3: #283630;
+  --paper: #efe7d2;
+  --paper-dim: #e4dac0;
+  --moss: #4a6e50;
+  --moss-bright: #6c9a73;
+  --ochre: #c9922f;
+  --brick: #a23e32;
+  --caution: #c2703e;
+  --consider: #c9922f;
+  --strong: #4f8657;
+  --ink-text: #22201a;
+  --muted: #8fa08f;
+  --hair: #3a4a3f;
+  --font-display: 'Fraunces', serif;
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
 * {
   box-sizing: border-box;
 }
-
 html,
 body {
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-body);
+  overflow: hidden;
 }
-
+::selection {
+  background: var(--ochre);
+  color: var(--ink);
+}
 #__next {
   height: 100%;
+}
+
+/* MapLibre control tweaks to match the ink theme */
+.maplibregl-ctrl-group {
+  background: var(--ink-2) !important;
+  border: 1px solid var(--hair) !important;
+}
+.maplibregl-ctrl-group button {
+  background: transparent !important;
+}
+.maplibregl-ctrl-attrib {
+  background: rgba(20, 28, 23, 0.7) !important;
+  color: var(--muted) !important;
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--ochre) !important;
 }
