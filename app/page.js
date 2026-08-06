@@ -8,6 +8,7 @@ import maplibregl from 'maplibre-gl';
 const INITIAL_VIEW = { lng: -122.35, lat: 48.75, zoom: 10 };
 
 const DEFAULT_COLOR = '#9AA5B1';
+const SUBDIVISION_COLOR = '#022da5'; // placeholder magenta — swap for your exact hex if you have one
 
 // Parcels only render once you're zoomed in enough to make individual
 // boundaries/labels meaningful — below this it's just noise (and a lot
@@ -17,6 +18,10 @@ const PARCEL_MIN_ZOOM = 13;
 // doesn't turn into overlapping clutter the moment parcels appear.
 const PARCEL_LABEL_MIN_ZOOM = 15;
 const ZONE_LABEL_MIN_ZOOM = 11;
+// Subdivisions sit between zoning (always visible) and parcels (zoom 13+)
+// in granularity, so they show up a bit before parcels do.
+const SUBDIVISION_MIN_ZOOM = 11;
+const SUBDIVISION_LABEL_MIN_ZOOM = 13;
 
 // Deterministic, maximally-spread color per index using the golden-angle
 // hue rotation — the Nth zone_code always gets the same color, and
@@ -208,10 +213,81 @@ export default function Page() {
         },
       });
 
+      // --- Subdivisions ---
+      map.addSource('subdivisions', {
+        type: 'vector',
+        tiles: [`${window.location.origin}/api/tiles/subdivisions/{z}/{x}/{y}.pbf`],
+        minzoom: SUBDIVISION_MIN_ZOOM,
+        maxzoom: 16,
+      });
+
+      map.addLayer({
+        id: 'subdivisions-fill',
+        type: 'fill',
+        source: 'subdivisions',
+        'source-layer': 'subdivisions',
+        minzoom: SUBDIVISION_MIN_ZOOM,
+        paint: {
+          'fill-color': SUBDIVISION_COLOR,
+          'fill-opacity': 0.15,
+        },
+      });
+
+      map.addLayer({
+        id: 'subdivisions-outline',
+        type: 'line',
+        source: 'subdivisions',
+        'source-layer': 'subdivisions',
+        minzoom: SUBDIVISION_MIN_ZOOM,
+        paint: {
+          'line-color': SUBDIVISION_COLOR,
+          'line-width': 2.5,
+        },
+      });
+
+      map.addLayer({
+        id: 'subdivisions-label',
+        type: 'symbol',
+        source: 'subdivisions',
+        'source-layer': 'subdivisions',
+        minzoom: SUBDIVISION_LABEL_MIN_ZOOM,
+        layout: {
+          'text-field': ['get', 'subdivision_name'],
+          'text-size': 11,
+          'text-font': ['Noto Sans Regular'],
+        },
+        paint: {
+          'text-color': SUBDIVISION_COLOR,
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 1.2,
+        },
+      });
+
+      map.on('click', 'subdivisions-fill', (e) => {
+        const feature = e.features?.[0];
+        if (!feature) return;
+        setSelected({
+          kind: 'subdivision',
+          name: feature.properties.name,
+          subdivisionName: feature.properties.subdivision_name,
+          platNumber: feature.properties.plat_number,
+          acreage: feature.properties.acreage,
+          lngLat: e.lngLat,
+        });
+      });
+
+      map.on('mouseenter', 'subdivisions-fill', () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', 'subdivisions-fill', () => {
+        map.getCanvas().style.cursor = '';
+      });
+
       map.on('click', 'parcels-fill', (e) => {
         const feature = e.features?.[0];
         if (!feature) return;
         setSelected({
+          kind: 'parcel',
           propId: feature.properties.prop_id,
           geoId: feature.properties.geo_id,
           name: feature.properties.name,
@@ -236,6 +312,7 @@ export default function Page() {
         const feature = e.features?.[0];
         if (!feature) return;
         setSelected({
+          kind: 'zoning',
           zone_code: feature.properties.zone_code,
           zone_desc: feature.properties.zone_desc,
           acres: feature.properties.acres,
@@ -333,7 +410,7 @@ export default function Page() {
         </div>
       )}
 
-      {selected && selected.propId === undefined && (
+      {selected && selected.kind === 'zoning' && (
         <div
           style={{
             position: 'absolute',
@@ -377,7 +454,7 @@ export default function Page() {
         </div>
       )}
 
-      {selected && selected.propId !== undefined && (
+      {selected && selected.kind === 'parcel' && (
         <div
           style={{
             position: 'absolute',
@@ -412,6 +489,54 @@ export default function Page() {
           {selected.geoId && (
             <div style={{ marginTop: 4, color: '#999', fontSize: 11 }}>
               geo_id: {selected.geoId}
+            </div>
+          )}
+        </div>
+      )}
+
+      {selected && selected.kind === 'subdivision' && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 20,
+            left: 12,
+            background: 'white',
+            padding: '12px 16px',
+            borderRadius: 8,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+            fontSize: 13,
+            minWidth: 200,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 3,
+                  background: SUBDIVISION_COLOR,
+                  display: 'inline-block',
+                  marginRight: 6,
+                }}
+              />
+              <strong>{selected.subdivisionName || selected.name || 'Unknown subdivision'}</strong>
+            </span>
+            <span
+              onClick={() => setSelected(null)}
+              style={{ cursor: 'pointer', color: '#999', marginLeft: 12 }}
+            >
+              ✕
+            </span>
+          </div>
+          {selected.acreage != null && (
+            <div style={{ marginTop: 4, color: '#666' }}>
+              {Number(selected.acreage).toFixed(2)} acres
+            </div>
+          )}
+          {selected.platNumber && (
+            <div style={{ marginTop: 4, color: '#999', fontSize: 11 }}>
+              plat #: {selected.platNumber}
             </div>
           )}
         </div>
