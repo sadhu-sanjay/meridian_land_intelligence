@@ -75,33 +75,15 @@ export default function SearchBar({ value, onChange, onSelect, placeholder }) {
       />
 
       {open && (loading || results.length > 0) && (
-        <ul
-          className="searchbar-results"
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            zIndex: 10,
-            margin: 0,
-            padding: 0,
-            listStyle: "none",
-            background: "white",
-            border: "1px solid #ddd",
-            borderRadius: 6,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            maxHeight: 280,
-            overflowY: "auto",
-          }}
-        >
+        <ul className="searchbar-results">
           {loading && (
-            <li style={{ padding: "10px 12px", color: "#999", fontSize: 13 }}>
+            <li className="searchbar-result searchbar-result--muted">
               Searching…
             </li>
           )}
 
           {!loading && results.length === 0 && (
-            <li style={{ padding: "10px 12px", color: "#999", fontSize: 13 }}>
+            <li className="searchbar-result searchbar-result--muted">
               No parcels found
             </li>
           )}
@@ -113,17 +95,12 @@ export default function SearchBar({ value, onChange, onSelect, placeholder }) {
                 // onMouseDown fires before the input's onBlur, so the
                 // click registers before the dropdown closes.
                 onMouseDown={() => handleSelect(result)}
-                style={{
-                  padding: "8px 12px",
-                  cursor: "pointer",
-                  fontSize: 13,
-                  borderBottom: "1px solid #f0f0f0",
-                }}
+                className="searchbar-result"
               >
-                <div style={{ fontWeight: 600 }}>
+                <div className="searchbar-result-title">
                   {result.name || result.geo_id}
                 </div>
-                <div style={{ color: "#888", fontSize: 12, marginTop: 2 }}>
+                <div className="searchbar-result-subtitle">
                   {subtitleFor(result)}
                 </div>
               </li>

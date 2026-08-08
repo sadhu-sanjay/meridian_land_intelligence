@@ -1,14 +1,20 @@
 /* Structural layout for the sidebar + map area. Everything inside the
    map area (overlays, drawer, etc.) keeps working exactly as before —
    this just reserves a column on the left for the sidebar. */
+
 .app-shell {
   position: relative;
   height: 100vh;
   width: 100vw;
   display: flex;
+  flex-direction: column;
 }
 
-
+.app-body {
+  flex: 1;
+  display: flex;
+  min-height: 0; /* without this, flex children can overflow instead of scrolling correctly */
+}
 
 .sidebar {
   width: 390px;
@@ -52,6 +58,59 @@
 
 .searchrow input::placeholder {
   color: var(--muted);
+}
+
+.searchbar {
+  position: relative;
+}
+
+.searchbar-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--ink);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.searchbar-result {
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.searchbar-result:hover {
+  background: var(--ink-2);
+}
+
+.searchbar-result--muted {
+  color: var(--muted);
+  cursor: default;
+}
+
+.searchbar-result--muted:hover {
+  background: transparent;
+}
+
+.searchbar-result-title {
+  font-weight: 600;
+  color: var(--paper);
+}
+
+.searchbar-result-subtitle {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
 }
 
 .map-area {
