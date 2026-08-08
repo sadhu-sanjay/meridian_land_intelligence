@@ -1,0 +1,59 @@
+/* Structural layout for the sidebar + map area. Everything inside the
+   map area (overlays, drawer, etc.) keeps working exactly as before —
+   this just reserves a column on the left for the sidebar. */
+.app-shell {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+}
+
+.sidebar {
+  width: 420px;
+  flex-shrink: 0;
+  height: 100%;
+  background: var(--ink-2);
+  border-right: 1px solid var(--hair);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.sidebar-section {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.searchrow input {
+  width: 100%;
+  background: var(--ink);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.searchrow input:focus {
+  outline: none;
+  border-color: var(--ochre);
+}
+
+.searchrow input::placeholder {
+  color: var(--muted);
+}
+
+.map-area {
+  position: relative;
+  flex: 1;
+  height: 100%;
+}

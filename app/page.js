@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import {ParcelDetailDrawer} from "@/components/parcel_detail";
+import Sidebar from "@/components/Sidebar";
+import "./shell.css";
 
 // Adjust this to wherever your zoning_districts data actually sits.
 // (Defaulting to Whatcom County, WA to match the existing parcel sync setup.)
@@ -40,6 +42,7 @@ export default function Page() {
   const [selected, setSelected] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
+  const [searchValue, setSearchValue] = useState("");
 
   // Looks at whatever zoning features are currently loaded on screen and
   // assigns any new zone_codes a color (existing ones keep theirs), then
@@ -329,6 +332,8 @@ export default function Page() {
       if (e?.error?.message) setLoadError(e.error.message);
     });
 
+    map.on("idle", refreshZoneColors);
+
     return () => {
       map.remove();
       mapRef.current = null;
@@ -336,7 +341,10 @@ export default function Page() {
   }, []);
 
   return (
-    <div style={{ position: "relative", height: "100vh", width: "100vw" }}>
+    <div className="app-shell">
+      <Sidebar searchValue={searchValue} onSearchChange={setSearchValue} />
+
+      <div className="map-area">
       <div ref={mapContainerRef} style={{ height: "100%", width: "100%" }} />
 
       <div
@@ -473,6 +481,7 @@ export default function Page() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
