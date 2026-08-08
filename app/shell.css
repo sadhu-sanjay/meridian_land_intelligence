@@ -8,8 +8,10 @@
   display: flex;
 }
 
+
+
 .sidebar {
-  width: 420px;
+  width: 390px;
   flex-shrink: 0;
   height: 100%;
   background: var(--ink-2);

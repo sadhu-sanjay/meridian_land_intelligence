@@ -5,10 +5,10 @@
  * WhatcomCo_Property/MapServer/1 ("Public Tax Parcels") layer and
  * upserts them into `parcels`, keyed on `geo_id`.
  *
- * Unlike a full county sync, this pulls ONLY parcels within RADIUS_M
- * meters of CENTER below — ArcGIS does the spatial filtering
- * server-side (geometry + distance + spatialRel params), so this
- * never fetches more than the local area.
+ * Unlike a point+radius sync, this pulls every parcel that
+ * INTERSECTS the polygon defined by AREA_POINTS below — ArcGIS does
+ * the spatial filtering server-side (geometry + spatialRel params),
+ * so this never fetches more than that area.
  *
  *   - missing/blank geo_id           -> record skipped, reported at the end
  *   - missing/degenerate geometry    -> record skipped (ST_BuildArea guard)
@@ -28,10 +28,32 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-// ---- Edit these two lines to change where/how far this pulls from ----
-const CENTER = { lat: 48.71676426971262, lng: -122.4994042476146 }
-const RADIUS_M = 1000;
+// ---- Edit these points to change the area this pulls from ----
+// Given as [lat, lng] (the order you'd naturally read coordinates in).
+// This does NOT need to be a rectangle — any simple polygon works, in
+// order around the boundary. It's closed automatically below if you
+// don't repeat the first point at the end.
+const AREA_POINTS = [
+	[48.78361645149258, -122.51135959758078],
+	[48.79376526447261, -122.43664965534646],
+	[48.74452435633179, -122.44542999906729],
+	[48.74127377350381, -122.51012726863102],
+];
 // ------------------------------------------------------------------
+
+// ArcGIS wants rings as [lng, lat] pairs, closed (first point repeated
+// at the end).
+function buildRing(points) {
+  const ring = points.map(([lat, lng]) => [lng, lat]);
+  const [firstLng, firstLat] = ring[0];
+  const [lastLng, lastLat] = ring[ring.length - 1];
+  if (firstLng !== lastLng || firstLat !== lastLat) {
+    ring.push([firstLng, firstLat]);
+  }
+  return ring;
+}
+
+const AREA_RING = buildRing(AREA_POINTS);
 
 // Confirmed against a real record via inspect-parcel-fields.js.
 // Note: there is no single "site address" field on this layer — it's
@@ -49,6 +71,8 @@ const FIELD_MAP = {
   situsStreetPrefix: "situs_street_prefix",
   situsStreet: "situs_street",
   situsCity: "situs_city",
+  titleOwnerName: "title_owner_name_full",
+  taxpayerName: "tax_payer_name_full",
 };
 
 const BASE_URL =
@@ -69,16 +93,13 @@ async function fetchPage(offset) {
     f: "json",
     resultOffset: String(offset),
     resultRecordCount: String(PAGE_SIZE),
-    // Spatial filter: only parcels within RADIUS_M meters of CENTER.
+    // Spatial filter: only parcels that intersect AREA_RING.
     geometry: JSON.stringify({
-      x: CENTER.lng,
-      y: CENTER.lat,
+      rings: [AREA_RING],
       spatialReference: { wkid: 4326 },
     }),
-    geometryType: "esriGeometryPoint",
-    distance: String(RADIUS_M),
-    units: "esriSRUnit_Meter",
-    spatialRel: "esriSpatialRelIntersects",
+    geometryType: "esriGeometryPolygon",
+    spatialRel: "esriSpatialRelEnvelopeIntersects",
     inSR: "4326",
   });
   const url = `${BASE_URL}/query?${params.toString()}`;
@@ -171,6 +192,8 @@ async function upsertPage(client, features) {
         acreage: toNumberOrNull(attrs[FIELD_MAP.acreage]),
         marketValue: toNumberOrNull(attrs[FIELD_MAP.marketValue]),
         propId: toStringOrNull(attrs[FIELD_MAP.propId]),
+        ownerName: toStringOrNull(attrs[FIELD_MAP.titleOwnerName]),
+        taxpayerName: toStringOrNull(attrs[FIELD_MAP.taxpayerName]),
         wkt: `MULTILINESTRING(${lines})`,
       });
     } catch (err) {
@@ -191,6 +214,8 @@ async function upsertPage(client, features) {
   const acreages = [];
   const marketValues = [];
   const propIds = [];
+  const ownerNames = [];
+  const taxpayerNames = [];
   const wkts = [];
 
   for (const [geoId, row] of byGeoId) {
@@ -201,6 +226,8 @@ async function upsertPage(client, features) {
     acreages.push(row.acreage);
     marketValues.push(row.marketValue);
     propIds.push(row.propId);
+    ownerNames.push(row.ownerName);
+    taxpayerNames.push(row.taxpayerName);
     wkts.push(row.wkt);
   }
 
@@ -217,14 +244,17 @@ async function upsertPage(client, features) {
         acreage,
         market_value,
         prop_id,
+        owner_name,
+        taxpayer_name,
         ST_Multi(ST_BuildArea(ST_SetSRID(wkt::geometry, 4326))) AS geom
       FROM unnest(
         $1::text[], $2::text[], $3::text[], $4::text[],
-        $5::numeric[], $6::numeric[], $7::text[], $8::text[]
-      ) AS t(geo_id, name, zoning, zoning_desc, acreage, market_value, prop_id, wkt)
+        $5::numeric[], $6::numeric[], $7::text[], $8::text[],
+        $9::text[], $10::text[]
+      ) AS t(geo_id, name, zoning, zoning_desc, acreage, market_value, prop_id, wkt, owner_name, taxpayer_name)
     )
-    INSERT INTO parcels (geo_id, name, zoning, zoning_desc, acreage, market_value, prop_id, geom)
-    SELECT geo_id, name, zoning, zoning_desc, acreage, market_value, prop_id, geom
+    INSERT INTO parcels (geo_id, name, zoning, zoning_desc, acreage, market_value, prop_id, owner_name, taxpayer_name, geom)
+    SELECT geo_id, name, zoning, zoning_desc, acreage, market_value, prop_id, owner_name, taxpayer_name, geom
     FROM built
     WHERE geom IS NOT NULL AND ST_IsValid(geom)
     ON CONFLICT (geo_id) DO UPDATE SET
@@ -234,11 +264,13 @@ async function upsertPage(client, features) {
       acreage = EXCLUDED.acreage,
       market_value = EXCLUDED.market_value,
       prop_id = EXCLUDED.prop_id,
+      owner_name = EXCLUDED.owner_name,
+      taxpayer_name = EXCLUDED.taxpayer_name,
       geom = EXCLUDED.geom,
       updated_at = now()
     RETURNING geo_id
     `,
-    [geoIds, names, zonings, zoningDescs, acreages, marketValues, propIds, wkts]
+    [geoIds, names, zonings, zoningDescs, acreages, marketValues, propIds, wkts, ownerNames, taxpayerNames]
   );
 
   const upserted = result.rows.length;
@@ -260,7 +292,7 @@ async function main() {
 
   try {
     console.log(
-      `Syncing parcels within ${RADIUS_M}m of (${CENTER.lat}, ${CENTER.lng}) (starting at offset ${offset})...`
+      `Syncing parcels inside the ${AREA_POINTS.length}-point area (starting at offset ${offset})...`
     );
     while (true) {
       let page;

@@ -1,15 +1,15 @@
-export default function Sidebar({ searchValue, onSearchChange }) {
+import SearchBar from "@/components/SearchBar";
+
+export default function Sidebar({ searchValue, onSearchChange, onSearchSelect }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-section">
         <p className="eyebrow">Search</p>
         <div className="searchrow">
-          <input
-            id="searchInput"
-            type="text"
-            placeholder="Search parcel, zoning, corridor…"
+          <SearchBar
             value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={onSearchChange}
+            onSelect={onSearchSelect}
           />
         </div>
       </div>

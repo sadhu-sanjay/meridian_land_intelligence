@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:migrate": "node --env-file=.env.local db/run-sql.js parcels.sql",
+    "db:migrate-local": "node --env-file=.env.local db/run-sql.js parcels.sql",
     "db:zones": "node --env-file=.env db/run-sql.js build-zoning-districts.sql",
     "db:sync-zoning": "node db/sync-zoning.js",
-    "db:sync-parcels": "node db/sync-parcels.js",
+    "db:sync-parcels-production": "node --env-file=.env.production.local db/sync-parcels.js",
+    "db:sync-parcels-local": "node --env-file=.env.local db/sync-parcels.js",
     "db:inspect-parcel-fields": "node db/inspect-parcel-fields.js",
     "db:seed": "node --env-file=.env db/seed.js",
     "db:sync-parcels-polygon": "node --env-file=.env db/sync-parcels-polygon.js"
@@ -18,7 +19,7 @@
   "dependencies": {
     "maplibre-gl": "^4.7.1",
     "next": "^14.2.5",
-    "pg": "^8.12.0",
+    "pg": "^8.22.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -27,7 +28,7 @@
     "@types/pg": "^8.11.6",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "typescript": "^5.5.3"
   }
 }

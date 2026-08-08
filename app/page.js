@@ -5,6 +5,7 @@ import maplibregl from "maplibre-gl";
 import {ParcelDetailDrawer} from "@/components/parcel_detail";
 import Sidebar from "@/components/Sidebar";
 import "./shell.css";
+import Header from "@/components/header";
 
 // Adjust this to wherever your zoning_districts data actually sits.
 // (Defaulting to Whatcom County, WA to match the existing parcel sync setup.)
@@ -100,6 +101,22 @@ export default function Page() {
     }
   };
 
+  // Handles picking a result from the search dropdown — flies the map to
+  // the parcel's centroid (surface_point, from the search API) and opens
+  // the same detail drawer a map click would, so search and click land
+  // on identical UI.
+  const handleSearchSelect = (result) => {
+    const map = mapRef.current;
+    if (map && result.lng != null && result.lat != null) {
+      map.flyTo({ center: [result.lng, result.lat], zoom: 16 });
+    }
+    const lngLat =
+      result.lng != null && result.lat != null
+        ? { lng: result.lng, lat: result.lat }
+        : null;
+    loadParcelDetail(result.id, lngLat);
+  };
+
   useEffect(() => {
     if (mapRef.current) return;
 
@@ -107,16 +124,17 @@ export default function Page() {
       container: mapContainerRef.current,
       style: {
         version: 8,
-        // Required for any layer using a symbol "text-field" (both label
-        // layers below) — without this MapLibre throws
-        // "layout.text-field requires glyphs" and labels never render.
         glyphs: "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf",
         sources: {
           basemap: {
             type: "raster",
-            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tiles: [
+              "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            ],
             tileSize: 256,
-            attribution: "© OpenStreetMap contributors",
+            maxzoom: 19,
+            attribution:
+              "Imagery © Esri, Maxar, Earthstar Geographics — ArcGIS Online World Imagery",
           },
         },
         layers: [{ id: "basemap", type: "raster", source: "basemap" }],
@@ -333,6 +351,7 @@ export default function Page() {
     });
 
     map.on("idle", refreshZoneColors);
+    
 
     return () => {
       map.remove();
@@ -341,8 +360,14 @@ export default function Page() {
   }, []);
 
   return (
+    <>
+    <Header />
     <div className="app-shell">
-      <Sidebar searchValue={searchValue} onSearchChange={setSearchValue} />
+      <Sidebar
+        searchValue={searchValue}
+        onSearchChange={setSearchValue}
+        onSearchSelect={handleSearchSelect}
+      />
 
       <div className="map-area">
       <div ref={mapContainerRef} style={{ height: "100%", width: "100%" }} />
@@ -350,7 +375,7 @@ export default function Page() {
       <div
         style={{
           position: "absolute",
-          top: 12,
+          bottom: 12,
           left: 12,
           background: "white",
           padding: "10px 14px",
@@ -360,6 +385,7 @@ export default function Page() {
           maxWidth: 220,
         }}
       >
+
         <strong>Zoning Districts</strong>
         <div style={{ color: "#666", marginTop: 4 }}>
           Vector tiles served live from PostGIS. Click a parcel zone for
@@ -483,5 +509,6 @@ export default function Page() {
       )}
       </div>
     </div>
+    </>
   );
 }
