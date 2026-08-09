@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import pool from '@/src/lib/db';
+import pool from '@/lib/db';
 
 // Same shape as the zoning tile route (see that file's comments for why
 // the bounds are computed both ways): the GIST index on parcels.geom is

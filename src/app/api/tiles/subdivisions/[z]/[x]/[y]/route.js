@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import pool from '@/src/lib/db';
+import pool from '@/lib/db'; 
 
 // Same shape as the parcels/zoning tile routes: the GIST index on
 // subdivisions.geom is in 4326, so we filter with `&&` against bounds

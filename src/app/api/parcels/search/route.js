@@ -1,4 +1,4 @@
-import pool from '@/src/lib/db';
+import pool from '@/lib/db';
 
 
 // GET /api/parcels/search?q=lummi+shore

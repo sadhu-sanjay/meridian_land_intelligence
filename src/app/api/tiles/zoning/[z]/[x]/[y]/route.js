@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import pool from '@/src/lib/db';
+import pool from '@/lib/db';
 
 // Standard PostGIS ST_AsMVT tile query.
 // - ST_TileEnvelope(z,x,y) gives the tile bounds in Web Mercator (3857).

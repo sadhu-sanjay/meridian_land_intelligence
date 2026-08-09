@@ -10,6 +10,7 @@
     "db:migrate-local": "node --env-file=.env.local db/run-sql.js parcels.sql",
     "db:zones": "node --env-file=.env db/run-sql.js build-zoning-districts.sql",
     "db:sync-zoning": "node db/sync-zoning.js",
+    "db:sync-cities": "node --env-file=.env.production.local scripts/sync/sync-cities.js",
     "db:sync-parcels-production": "node --env-file=.env.production.local db/sync-parcels.js",
     "db:sync-parcels-local": "node --env-file=.env.local db/sync-parcels.js",
     "db:inspect-parcel-fields": "node db/inspect-parcel-fields.js",

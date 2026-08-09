@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import pool from '@/src/lib/db';
+import pool from '@/lib/db';
 
 /**
  * Aggregated parcel record: base parcel attributes + a spatial join to
