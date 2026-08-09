@@ -1,7 +1,39 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import maplibregl from "maplibre-gl";
+import LayersControl from "./LayersControl";
+
+// Layer groups exposed in the layers panel. Each key maps to the actual
+// maplibre layer ids that get shown/hidden together.
+const LAYER_GROUPS = [
+  { key: "cities", label: "Cities", layers: ["cities-fill", "cities-outline"] },
+  {
+    key: "zoning",
+    label: "Zoning",
+    layers: ["zoning-fill", "zoning-outline", "zoning-label"],
+  },
+  {
+    key: "parcels",
+    label: "Parcels",
+    layers: ["parcels-outline", "parcels-fill", "parcels-label"],
+  },
+  {
+    key: "subdivisions",
+    label: "Subdivisions",
+    layers: [
+      "subdivisions-fill",
+      "subdivisions-outline",
+      "subdivisions-label",
+    ],
+  },
+];
 
 // Adjust this to wherever your zoning_districts data actually sits.
 // (Defaulting to Whatcom County, WA to match the existing parcel sync setup.)
@@ -58,12 +90,44 @@ const MapView = forwardRef(function MapView(
   const colorMapRef = useRef(new Map()); // zone_code -> color, assigned once, stable
   const hoveredParcelIdRef = useRef(null);
   const selectedParcelIdRef = useRef(null);
+  const mapLoadedRef = useRef(false);
+
+  const [layerVisibility, setLayerVisibility] = useState(() =>
+    Object.fromEntries(LAYER_GROUPS.map((g) => [g.key, true])),
+  );
 
   useImperativeHandle(ref, () => ({
     flyTo(lng, lat, zoom = 16) {
       mapRef.current?.flyTo({ center: [lng, lat], zoom });
     },
   }));
+
+  // Applies a group's on/off state to its underlying maplibre layers.
+  // Safe to call before the map/layers exist (e.g. from initial state
+  // effects) — just does nothing until they're there.
+  const applyLayerVisibility = (groupKey, visible) => {
+    const map = mapRef.current;
+    if (!map || !mapLoadedRef.current) return;
+    const group = LAYER_GROUPS.find((g) => g.key === groupKey);
+    if (!group) return;
+    for (const layerId of group.layers) {
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(
+          layerId,
+          "visibility",
+          visible ? "visible" : "none",
+        );
+      }
+    }
+  };
+
+  const toggleLayer = (groupKey) => {
+    setLayerVisibility((prev) => {
+      const next = { ...prev, [groupKey]: !prev[groupKey] };
+      applyLayerVisibility(groupKey, next[groupKey]);
+      return next;
+    });
+  };
 
   // Looks at whatever zoning features are currently loaded on screen and
   // assigns any new zone_codes a color (existing ones keep theirs), then
@@ -132,6 +196,35 @@ const MapView = forwardRef(function MapView(
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
     map.on("load", () => {
+      map.addSource("cities", {
+        type: "vector",
+        tiles: [`${window.location.origin}/api/tiles/cities/{z}/{x}/{y}.pbf`],
+        minzoom: 0,
+        maxzoom: 24,
+      });
+
+      map.addLayer({
+        id: "cities-fill",
+        type: "fill",
+        source: "cities",
+        "source-layer": "cities",
+        paint: {
+          "fill-color": "#81056e",
+          "fill-opacity": 0.08,
+        },
+      });
+
+      map.addLayer({
+        id: "cities-outline",
+        type: "line",
+        source: "cities",
+        "source-layer": "cities",
+        paint: {
+          "line-color": "#8f052c",
+          "line-width": 2,
+        },
+      });
+
       map.addSource("zoning", {
         type: "vector",
         tiles: [`${window.location.origin}/api/tiles/zoning/{z}/{x}/{y}.pbf`],
@@ -442,6 +535,11 @@ const MapView = forwardRef(function MapView(
           map.getCanvas().style.cursor = "";
         },
       );
+
+      mapLoadedRef.current = true;
+      for (const group of LAYER_GROUPS) {
+        applyLayerVisibility(group.key, layerVisibility[group.key]);
+      }
     });
 
     map.on("error", (e) => {
@@ -450,7 +548,7 @@ const MapView = forwardRef(function MapView(
       if (e?.error?.message) onError?.(e.error.message);
     });
 
-    map.on("idle", refreshZoneColors);
+    // map.on("idle", refreshZoneColors);
 
     return () => {
       map.remove();
@@ -459,7 +557,14 @@ const MapView = forwardRef(function MapView(
   }, []);
 
   return (
-    <div ref={mapContainerRef} style={{ height: "100%", width: "100%" }} />
+    <div style={{ position: "relative", height: "100%", width: "100%" }}>
+      <div ref={mapContainerRef} style={{ height: "100%", width: "100%" }} />
+      <LayersControl
+        groups={LAYER_GROUPS}
+        visibility={layerVisibility}
+        onToggle={toggleLayer}
+      />
+    </div>
   );
 });
 

@@ -16,47 +16,35 @@
   min-height: 0; /* without this, flex children can overflow instead of scrolling correctly */
 }
 
-.sidebar {
-  width: 390px;
-  flex-shrink: 0;
-  height: 100%;
-  background: var(--ink-2);
-  border-right: 1px solid var(--hair);
-  padding: 16px;
-  overflow-y: auto;
+.floating-searchbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  width: 320px;
 }
 
-.sidebar-section {
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--hair);
-}
-
-.eyebrow {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin: 0 0 8px;
-}
-
-.searchrow input {
+.floating-searchbar .searchrow input,
+.floating-searchbar input {
   width: 100%;
+  min-height: 42px;
   background: var(--ink);
   border: 1px solid var(--hair);
-  border-radius: 6px;
-  padding: 8px 10px;
+  border-radius: 42px;
+  padding: 10px 12px;
   color: var(--paper);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.2;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
-.searchrow input:focus {
+.floating-searchbar input:focus {
   outline: none;
   border-color: var(--ochre);
 }
 
-.searchrow input::placeholder {
+.floating-searchbar input::placeholder {
   color: var(--muted);
 }
 

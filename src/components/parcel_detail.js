@@ -28,8 +28,6 @@ const MERIDIAN = {
 };
 
 
-
-
 /** Map score (0–100) or letter grade → display grade, matching index.html gradeOf(). */
 function gradeOf(scoreOrGrade) {
   if (scoreOrGrade == null || scoreOrGrade === '') {

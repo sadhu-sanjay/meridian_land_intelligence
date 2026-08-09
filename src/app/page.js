@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ParcelDetailDrawer } from "@/components/parcel_detail";
-import Sidebar from "@/components/Sidebar";
+import SearchBar from "@/components/SearchBar";
 import Header from "@/components/header";
 import MapView, {
   DEFAULT_COLOR,
@@ -53,13 +53,15 @@ export default function Page() {
     <div className="app-shell">
       <Header />
       <div className="app-body">
-        <Sidebar
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-          onSearchSelect={handleSearchSelect}
-        />
-
         <div className="map-area">
+          <div className="floating-searchbar">
+            <SearchBar
+              value={searchValue}
+              onChange={setSearchValue}
+              onSelect={handleSearchSelect}
+            />
+          </div>
+
           <MapView
             ref={mapViewRef}
             onParcelClick={loadParcelDetail}
@@ -72,30 +74,12 @@ export default function Page() {
             onError={setLoadError}
           />
 
-          <div
-            style={{
-              position: "absolute",
-              bottom: 12,
-              left: 12,
-              background: "white",
-              padding: "10px 14px",
-              borderRadius: 8,
-              boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-              fontSize: 13,
-              maxWidth: 220,
-            }}
-          >
-            <strong>Zoning Districts</strong>
-            <div style={{ color: "#666", marginTop: 4 }}>
-              Vector tiles served live from PostGIS. Click a parcel zone for
-              details.
-            </div>
+            
             {loadError && (
               <div style={{ color: "#c0392b", marginTop: 6 }}>
                 Error: {loadError}
               </div>
             )}
-          </div>
 
           {selected && selected.kind === "zoning" && (
             <div

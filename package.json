@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:migrate-local": "node --env-file=.env.local db/run-sql.js parcels.sql",
+    "db:migrate-local": "node --env-file=.env.local scripts/db/run-sql.js ../../database/cities.sql",
     "db:zones": "node --env-file=.env db/run-sql.js build-zoning-districts.sql",
     "db:sync-zoning": "node db/sync-zoning.js",
     "db:sync-cities": "node --env-file=.env.production.local scripts/sync/sync-cities.js",

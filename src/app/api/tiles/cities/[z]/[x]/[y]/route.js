@@ -86,14 +86,14 @@ export async function GET(_request, { params }) {
       },
     });
   } catch (err) {
-    console.error(
-      'Cities tile query failed:',
-      err
-    );
+  console.error(
+    'Cities tile query failed:',
+    err
+  );
 
-    return NextResponse.json(
-      { error: 'Tile generation failed' },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json(
+    { error: 'Tile generation failed' },
+    { status: 500 }
+  );
+}
 }
