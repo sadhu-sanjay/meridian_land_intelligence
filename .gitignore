@@ -9,3 +9,8 @@ package.lock.json
 .next
 .env.production
 .env
+
+
+.DS_Store
+__MACOSX/
+._*
