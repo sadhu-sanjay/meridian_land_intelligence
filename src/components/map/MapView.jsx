@@ -247,7 +247,7 @@ const MapView = forwardRef(function MapView(
         maxzoom: 13.5,
         "source-layer": "zoning_districts",
         paint: {
-          "fill-color": DEFAULT_COLOR, // replaced with a per-zone match expr once tiles load
+          "fill-color": "", // replaced with a per-zone match expr once tiles load
           "fill-opacity": 0.45,
         },
       });
