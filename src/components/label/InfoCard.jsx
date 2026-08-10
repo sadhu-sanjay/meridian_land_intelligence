@@ -68,7 +68,7 @@ function renderBody(info) {
     case "city":
       return (
         <>
-          <strong style={{ color: "var(--moss-bright)", fontWeight: 700 }}>
+          <strong style={{ color: "var(--paper)", fontWeight: 700 }}>
             {info.city_name || "Unknown city"}
           </strong>
           {info.city_type && <div style={{ color: "var(--muted)", marginTop: 2 }}>{info.city_type}</div>}
