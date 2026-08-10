@@ -41,7 +41,6 @@ const INITIAL_VIEW = { lng: -122.35, lat: 48.75, zoom: 10 };
 
 const DEFAULT_COLOR = "#9AA5B1";
 const SUBDIVISION_COLOR = "#116bb1";
-const CITY_FILL_COLOR = "#410138";
 // Shared hover-highlight accent for zoning/subdivision/city borders —
 // same idea as PARCEL_BORDER_HOVER below, kept as one constant since
 // these three layers don't have per-layer selected states to juggle.
@@ -63,7 +62,7 @@ const PARCEL_MIN_ZOOM = 13;
 // Labels specifically wait even longer than the fill/outline, so text
 // doesn't turn into overlapping clutter the moment parcels appear.
 const PARCEL_LABEL_MIN_ZOOM = 15;
-const ZONE_LABEL_MIN_ZOOM = 11;
+const ZONE_LABEL_MIN_ZOOM = 10;
 // Subdivisions sit between zoning (always visible) and parcels (zoom 13+)
 // in granularity, so they show up a bit before parcels do.
 const SUBDIVISION_MIN_ZOOM = 11;
@@ -141,6 +140,51 @@ const MapView = forwardRef(function MapView(
     });
   };
 
+  // Looks at whatever zoning features are currently loaded on screen and
+  // assigns any new zone_codes a color (existing ones keep theirs), then
+  // pushes the resulting match expression into the layer paint.
+  const refreshZoneColors = () => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer("zoning-fill")) return;
+
+    const features = map.querySourceFeatures("zoning", {
+      sourceLayer: "zoning_districts",
+    });
+
+    const codes = new Set();
+    for (const f of features) {
+      const code = f.properties?.zone_code;
+      if (code) codes.add(code);
+    }
+
+    const colorMap = colorMapRef.current;
+    let added = false;
+    for (const code of [...codes].sort()) {
+      if (!colorMap.has(code)) {
+        colorMap.set(code, colorForIndex(colorMap.size));
+        added = true;
+      }
+    }
+    if (!added) return;
+
+    const matchExpr = ["match", ["get", "zone_code"]];
+    for (const [code, color] of colorMap.entries()) {
+      matchExpr.push(code, color);
+    }
+    matchExpr.push(DEFAULT_COLOR);
+
+    map.setPaintProperty("zoning-fill", "fill-color", matchExpr);
+    // Wrap the per-zone match expression so hover still overrides it
+    // (mirrors the "case" hover expression zoning-outline is
+    // initialized with in addLayer above).
+    map.setPaintProperty("zoning-outline", "line-color", [
+      "case",
+      ["boolean", ["feature-state", "hover"], false],
+      LAYER_BORDER_HOVER,
+      matchExpr,
+    ]);
+  };
+
   useEffect(() => {
     if (mapRef.current) return;
 
@@ -186,7 +230,12 @@ const MapView = forwardRef(function MapView(
         "source-layer": "cities",
         paint: {
           "fill-color": "#81056e",
-          "fill-opacity": 0.08,
+          "fill-opacity": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            0.18,
+            0.08,
+          ],
         },
       });
 
@@ -264,14 +313,14 @@ const MapView = forwardRef(function MapView(
         "source-layer": "zoning_districts",
         minzoom: ZONE_LABEL_MIN_ZOOM,
         layout: {
-          "text-field": ["get", "zone_code"],
+          "text-field": ["get", "zone_desc"],
           "text-size": 12,
-          "text-font": ["Noto Sans Regular"],
+	  "text-font": ["Klokantech Noto Sans Regular"],
         },
         paint: {
           "text-color": "#2a2a2a",
           "text-halo-color": "#ffffff",
-          "text-halo-width": 1.2,
+          "text-halo-width": 1.5,
         },
       });
 
@@ -339,7 +388,7 @@ const MapView = forwardRef(function MapView(
         layout: {
           "text-field": ["get", "prop_id"],
           "text-size": 11,
-          "text-font": ["Noto Sans Regular"],
+	  "text-font": ["Klokantech Noto Sans Regular"],
         },
         paint: {
           "text-color": "#0b3d66",
@@ -407,11 +456,11 @@ const MapView = forwardRef(function MapView(
         layout: {
           "text-field": ["get", "subdivision_name"],
           "text-size": 11,
-          "text-font": ["Noto Sans Regular"],
+	  "text-font": ["Klokantech Noto Sans Regular"],
         },
         paint: {
           "text-color": SUBDIVISION_COLOR,
-          "text-halo-color": "#ffffff",
+          "text-halo-color": "",
           "text-halo-width": 1.2,
         },
       });
