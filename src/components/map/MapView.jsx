@@ -13,25 +13,29 @@ import LayersControl from "./LayersControl";
 // Layer groups exposed in the layers panel. Each key maps to the actual
 // maplibre layer ids that get shown/hidden together.
 const LAYER_GROUPS = [
-  { key: "cities", label: "Cities", layers: ["cities-fill", "cities-outline"] },
+  {
+    key: "cities",
+    label: "Cities",
+    layers: ["cities-fill", "cities-outline"],
+    visible: true,
+  },
   {
     key: "zoning",
     label: "Zoning",
     layers: ["zoning-fill", "zoning-outline", "zoning-label"],
+    visible: true,
   },
   {
     key: "parcels",
     label: "Parcels",
     layers: ["parcels-outline", "parcels-fill", "parcels-label"],
+    visible: true,
   },
   {
     key: "subdivisions",
     label: "Subdivisions",
-    layers: [
-      "subdivisions-fill",
-      "subdivisions-outline",
-      "subdivisions-label",
-    ],
+    layers: ["subdivisions-fill", "subdivisions-outline", "subdivisions-label"],
+    visible: true,
   },
 ];
 
@@ -97,7 +101,7 @@ const MapView = forwardRef(function MapView(
   const hoveredInfoKeyRef = useRef(null);
 
   const [layerVisibility, setLayerVisibility] = useState(() =>
-    Object.fromEntries(LAYER_GROUPS.map((g) => [g.key, true])),
+    Object.fromEntries(LAYER_GROUPS.map((g) => [g.key, g.visible])),
   );
 
   useImperativeHandle(ref, () => ({
@@ -556,7 +560,8 @@ const MapView = forwardRef(function MapView(
           layers: HOVER_LAYERS,
         });
         const topFeature = [...features].sort(
-          (a, b) => HOVER_LAYERS.indexOf(a.layer.id) - HOVER_LAYERS.indexOf(b.layer.id),
+          (a, b) =>
+            HOVER_LAYERS.indexOf(a.layer.id) - HOVER_LAYERS.indexOf(b.layer.id),
         )[0];
 
         if (!topFeature) {

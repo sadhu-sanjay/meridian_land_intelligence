@@ -79,53 +79,9 @@ export default function Page() {
 
           <InfoCard info={hovered} />
 
-            {loadError && (
-              <div style={{ color: "#c0392b", margin: "auto", }}>
-                Error: {loadError}
-              </div>
-            )}
-
-          {selected && selected.kind === "zoning" && (
-            <div
-              style={{
-                position: "absolute",
-                bottom: 20,
-                left: 12,
-                background: "white",
-                padding: "12px 16px",
-                borderRadius: 8,
-                boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-                fontSize: 13,
-                minWidth: 200,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center" }}>
-                  <span
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: 3,
-                      background: selected.color || DEFAULT_COLOR,
-                      display: "inline-block",
-                      marginRight: 6,
-                    }}
-                  />
-                  <strong>{selected.zone_code || "Unknown zone"}</strong>
-                </span>
-                <span
-                  onClick={() => setSelected(null)}
-                  style={{ cursor: "pointer", color: "#999", marginLeft: 12 }}
-                >
-                  ✕
-                </span>
-              </div>
+          {loadError && (
+            <div style={{ color: "#c0392b", margin: "auto" }}>
+              Error: {loadError}
             </div>
           )}
 
@@ -134,64 +90,6 @@ export default function Page() {
             detailLoading={detailLoading}
             onClose={() => setSelected(null)}
           />
-
-          {selected && selected.kind === "subdivision" && (
-            <div
-              style={{
-                position: "absolute",
-                bottom: 20,
-                left: 12,
-                background: "white",
-                padding: "12px 16px",
-                borderRadius: 8,
-                boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-                fontSize: 13,
-                minWidth: 200,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center" }}>
-                  <span
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: 3,
-                      background: SUBDIVISION_COLOR,
-                      display: "inline-block",
-                      marginRight: 6,
-                    }}
-                  />
-                  <strong>
-                    {selected.subdivisionName ||
-                      selected.name ||
-                      "Unknown subdivision"}
-                  </strong>
-                </span>
-                <span
-                  onClick={() => setSelected(null)}
-                  style={{ cursor: "pointer", color: "#999", marginLeft: 12 }}
-                >
-                  ✕
-                </span>
-              </div>
-              {selected.acreage != null && (
-                <div style={{ marginTop: 4, color: "#666" }}>
-                  {Number(selected.acreage).toFixed(2)} acres
-                </div>
-              )}
-              {selected.platNumber && (
-                <div style={{ marginTop: 4, color: "#999", fontSize: 11 }}>
-                  plat #: {selected.platNumber}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>
