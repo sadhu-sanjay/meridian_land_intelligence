@@ -27,11 +27,7 @@ const LAYER_GROUPS = [
   {
     key: "subdivisions",
     label: "Subdivisions",
-    layers: [
-      "subdivisions-fill",
-      "subdivisions-outline",
-      "subdivisions-label",
-    ],
+    layers: ["subdivisions-fill", "subdivisions-outline", "subdivisions-label"],
   },
 ];
 
@@ -138,51 +134,6 @@ const MapView = forwardRef(function MapView(
       applyLayerVisibility(groupKey, next[groupKey]);
       return next;
     });
-  };
-
-  // Looks at whatever zoning features are currently loaded on screen and
-  // assigns any new zone_codes a color (existing ones keep theirs), then
-  // pushes the resulting match expression into the layer paint.
-  const refreshZoneColors = () => {
-    const map = mapRef.current;
-    if (!map || !map.getLayer("zoning-fill")) return;
-
-    const features = map.querySourceFeatures("zoning", {
-      sourceLayer: "zoning_districts",
-    });
-
-    const codes = new Set();
-    for (const f of features) {
-      const code = f.properties?.zone_code;
-      if (code) codes.add(code);
-    }
-
-    const colorMap = colorMapRef.current;
-    let added = false;
-    for (const code of [...codes].sort()) {
-      if (!colorMap.has(code)) {
-        colorMap.set(code, colorForIndex(colorMap.size));
-        added = true;
-      }
-    }
-    if (!added) return;
-
-    const matchExpr = ["match", ["get", "zone_code"]];
-    for (const [code, color] of colorMap.entries()) {
-      matchExpr.push(code, color);
-    }
-    matchExpr.push(DEFAULT_COLOR);
-
-    map.setPaintProperty("zoning-fill", "fill-color", matchExpr);
-    // Wrap the per-zone match expression so hover still overrides it
-    // (mirrors the "case" hover expression zoning-outline is
-    // initialized with in addLayer above).
-    map.setPaintProperty("zoning-outline", "line-color", [
-      "case",
-      ["boolean", ["feature-state", "hover"], false],
-      LAYER_BORDER_HOVER,
-      matchExpr,
-    ]);
   };
 
   useEffect(() => {
@@ -315,7 +266,7 @@ const MapView = forwardRef(function MapView(
         layout: {
           "text-field": ["get", "zone_desc"],
           "text-size": 12,
-	  "text-font": ["Klokantech Noto Sans Regular"],
+          "text-font": ["Klokantech Noto Sans Regular"],
         },
         paint: {
           "text-color": "#2a2a2a",
@@ -388,7 +339,7 @@ const MapView = forwardRef(function MapView(
         layout: {
           "text-field": ["get", "prop_id"],
           "text-size": 11,
-	  "text-font": ["Klokantech Noto Sans Regular"],
+          "text-font": ["Klokantech Noto Sans Regular"],
         },
         paint: {
           "text-color": "#0b3d66",
@@ -456,7 +407,7 @@ const MapView = forwardRef(function MapView(
         layout: {
           "text-field": ["get", "subdivision_name"],
           "text-size": 11,
-	  "text-font": ["Klokantech Noto Sans Regular"],
+          "text-font": ["Klokantech Noto Sans Regular"],
         },
         paint: {
           "text-color": SUBDIVISION_COLOR,
@@ -602,7 +553,8 @@ const MapView = forwardRef(function MapView(
           layers: HOVER_LAYERS,
         });
         const topFeature = [...features].sort(
-          (a, b) => HOVER_LAYERS.indexOf(a.layer.id) - HOVER_LAYERS.indexOf(b.layer.id),
+          (a, b) =>
+            HOVER_LAYERS.indexOf(a.layer.id) - HOVER_LAYERS.indexOf(b.layer.id),
         )[0];
 
         if (!topFeature) {
