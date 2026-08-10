@@ -82,7 +82,7 @@ function colorForIndex(i) {
 // search selection, since the map instance itself no longer lives in
 // page.js.
 const MapView = forwardRef(function MapView(
-  { onParcelClick, onSubdivisionClick, onZoningClick, onError },
+  { onParcelClick, onSubdivisionClick, onZoningClick, onError, onFeatureHover },
   ref,
 ) {
   const mapContainerRef = useRef(null);
@@ -91,6 +91,10 @@ const MapView = forwardRef(function MapView(
   const hoveredParcelIdRef = useRef(null);
   const selectedParcelIdRef = useRef(null);
   const mapLoadedRef = useRef(false);
+  // Dedupes the info-card hover callback so we only call up to the
+  // parent when the hovered feature actually changes, not on every
+  // pixel of mousemove.
+  const hoveredInfoKeyRef = useRef(null);
 
   const [layerVisibility, setLayerVisibility] = useState(() =>
     Object.fromEntries(LAYER_GROUPS.map((g) => [g.key, true])),
@@ -535,6 +539,76 @@ const MapView = forwardRef(function MapView(
           map.getCanvas().style.cursor = "";
         },
       );
+
+      // Unified hover reporting for the info card — independent of the
+      // parcel-specific feature-state hover border above. Priority
+      // mirrors the click handler: most specific feature (parcel) wins
+      // over broader ones (subdivision, zoning, city) when they stack.
+      const HOVER_LAYERS = [
+        "parcels-fill",
+        "subdivisions-fill",
+        "zoning-fill",
+        "cities-fill",
+      ];
+      map.on("mousemove", (e) => {
+        if (!onFeatureHover) return;
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: HOVER_LAYERS,
+        });
+        const topFeature = [...features].sort(
+          (a, b) => HOVER_LAYERS.indexOf(a.layer.id) - HOVER_LAYERS.indexOf(b.layer.id),
+        )[0];
+
+        if (!topFeature) {
+          if (hoveredInfoKeyRef.current !== null) {
+            hoveredInfoKeyRef.current = null;
+            onFeatureHover(null);
+          }
+          return;
+        }
+
+        const key = `${topFeature.layer.id}:${topFeature.id ?? JSON.stringify(topFeature.properties)}`;
+        if (hoveredInfoKeyRef.current === key) return;
+        hoveredInfoKeyRef.current = key;
+
+        const p = topFeature.properties;
+        if (topFeature.layer.id === "parcels-fill") {
+          onFeatureHover({
+            kind: "parcel",
+            id: p.id,
+            propId: p.prop_id,
+            name: p.name,
+            zoning: p.zoning,
+            acreage: p.acreage,
+          });
+        } else if (topFeature.layer.id === "subdivisions-fill") {
+          onFeatureHover({
+            kind: "subdivision",
+            name: p.name,
+            subdivisionName: p.subdivision_name,
+            acreage: p.acreage,
+          });
+        } else if (topFeature.layer.id === "zoning-fill") {
+          onFeatureHover({
+            kind: "zoning",
+            zone_code: p.zone_code,
+            zone_desc: p.zone_desc,
+          });
+        } else if (topFeature.layer.id === "cities-fill") {
+          onFeatureHover({
+            kind: "city",
+            city_name: p.city_name,
+            city_type: p.city_type,
+          });
+        }
+      });
+
+      map.getCanvas().addEventListener("mouseleave", () => {
+        if (hoveredInfoKeyRef.current !== null) {
+          hoveredInfoKeyRef.current = null;
+          onFeatureHover?.(null);
+        }
+      });
 
       mapLoadedRef.current = true;
       for (const group of LAYER_GROUPS) {

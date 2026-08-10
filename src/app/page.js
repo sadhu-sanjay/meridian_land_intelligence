@@ -1,18 +1,20 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ParcelDetailDrawer } from "@/components/parcel_detail";
-import SearchBar from "@/components/SearchBar";
-import Header from "@/components/header";
+import { ParcelDetailDrawer } from "@/components/parcel/parcel_detail";
+import SearchBar from "@/components/search/SearchBar";
+import Header from "@/components/layout/header";
 import MapView, {
   DEFAULT_COLOR,
   SUBDIVISION_COLOR,
-} from "@/components/MapView";
+} from "@/components/map/MapView";
+import InfoCard from "@/components/label/InfoCard";
 import "./shell.css";
 
 export default function Page() {
   const mapViewRef = useRef(null);
   const [selected, setSelected] = useState(null);
+  const [hovered, setHovered] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [searchValue, setSearchValue] = useState("");
@@ -71,8 +73,11 @@ export default function Page() {
             onZoningClick={(zoning) =>
               setSelected({ kind: "zoning", ...zoning })
             }
+            onFeatureHover={setHovered}
             onError={setLoadError}
           />
+
+          <InfoCard info={hovered} />
 
             {loadError && (
               <div style={{ color: "#c0392b", margin: "auto", }}>

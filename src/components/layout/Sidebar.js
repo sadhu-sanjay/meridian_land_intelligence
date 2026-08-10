@@ -1,4 +1,4 @@
-import SearchBar from "@/components/SearchBar";
+import SearchBar from "@/components/search/SearchBar";
 
 export default function Sidebar({ searchValue, onSearchChange, onSearchSelect }) {
   return (
