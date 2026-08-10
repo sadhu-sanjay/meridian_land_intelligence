@@ -27,14 +27,14 @@
 .floating-searchbar .searchrow input,
 .floating-searchbar input {
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   background: var(--ink);
   border: 1px solid var(--hair);
-  border-radius: 42px;
-  padding: 10px 12px;
+  border-radius: 22px;
+  padding: 10px 22px;
   color: var(--paper);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.2;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }

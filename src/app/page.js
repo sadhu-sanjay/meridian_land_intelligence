@@ -74,9 +74,8 @@ export default function Page() {
             onError={setLoadError}
           />
 
-            
             {loadError && (
-              <div style={{ color: "#c0392b", marginTop: 6 }}>
+              <div style={{ color: "#c0392b", margin: "auto", }}>
                 Error: {loadError}
               </div>
             )}
