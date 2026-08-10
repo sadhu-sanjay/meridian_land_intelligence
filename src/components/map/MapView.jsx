@@ -417,7 +417,12 @@ const MapView = forwardRef(function MapView(
       });
 
       map.on("click", (e) => {
-        const layers = ["zoning-fill", "subdivisions-fill", "parcels-fill"];
+        const layers = [
+          "cities-fill",
+          "zoning-fill",
+          "subdivisions-fill",
+          "parcels-fill",
+        ];
         const features = map.queryRenderedFeatures(e.point, { layers });
 
         const topFeature = [...features].sort(
@@ -439,6 +444,44 @@ const MapView = forwardRef(function MapView(
           }
           return;
         }
+
+        // --- NEW GEOMETRY BOUNDING BOX LOGIC ---
+        // Native bounds calculation from the clicked feature's geometry
+        const bounds = new maplibregl.LngLatBounds();
+        
+        // MapLibre features can be Polygon or MultiPolygon
+        const extractCoords = (coords, isMulti) => {
+          if (isMulti) {
+            coords.forEach(poly => poly.forEach(ring => ring.forEach(coord => bounds.extend(coord))));
+          } else {
+            coords.forEach(ring => ring.forEach(coord => bounds.extend(coord)));
+          }
+        };
+
+        if (topFeature.geometry.type === 'Polygon') {
+          extractCoords(topFeature.geometry.coordinates, false);
+        } else if (topFeature.geometry.type === 'MultiPolygon') {
+          extractCoords(topFeature.geometry.coordinates, true);
+        }
+
+        if (!bounds.isEmpty()) {
+          // Max zoom caps so small geometries (like a 500sqft parcel) 
+          // don't force the camera into maximum magnification.
+          const maxZooms = {
+            "parcels-fill": 19,
+            "subdivisions-fill": 16,
+            "zoning-fill": 14,
+            "cities-fill": 12,
+          };
+
+          map.fitBounds(bounds, {
+            padding: 80, // Adds an 80px visual buffer around the polygon
+            maxZoom: maxZooms[topFeature.layer.id] || 16,
+            duration: 1200,
+            essential: true
+          });
+        }
+        // ---------------------------------------
 
         if (topFeature.layer.id === "parcels-fill") {
           if (
@@ -499,6 +542,19 @@ const MapView = forwardRef(function MapView(
             acres: topFeature.properties.acres,
             color: colorMapRef.current.get(zone_code) || DEFAULT_COLOR,
           });
+        } else if (topFeature.layer.id === "cities-fill") {
+           // Clear parcel highlights when clicking a city space where there are no smaller geometries
+           if (selectedParcelIdRef.current !== null) {
+            map.setFeatureState(
+              {
+                source: "parcels",
+                sourceLayer: "parcels",
+                id: selectedParcelIdRef.current,
+              },
+              { selected: false },
+            );
+            selectedParcelIdRef.current = null;
+          }
         }
       });
 
