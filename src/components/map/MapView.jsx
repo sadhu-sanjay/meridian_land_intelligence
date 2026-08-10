@@ -13,29 +13,25 @@ import LayersControl from "./LayersControl";
 // Layer groups exposed in the layers panel. Each key maps to the actual
 // maplibre layer ids that get shown/hidden together.
 const LAYER_GROUPS = [
-  {
-    key: "cities",
-    label: "Cities",
-    layers: ["cities-fill", "cities-outline"],
-    visible: true,
-  },
+  { key: "cities", label: "Cities", layers: ["cities-fill", "cities-outline"] },
   {
     key: "zoning",
     label: "Zoning",
     layers: ["zoning-fill", "zoning-outline", "zoning-label"],
-    visible: true,
   },
   {
     key: "parcels",
     label: "Parcels",
     layers: ["parcels-outline", "parcels-fill", "parcels-label"],
-    visible: true,
   },
   {
     key: "subdivisions",
     label: "Subdivisions",
-    layers: ["subdivisions-fill", "subdivisions-outline", "subdivisions-label"],
-    visible: true,
+    layers: [
+      "subdivisions-fill",
+      "subdivisions-outline",
+      "subdivisions-label",
+    ],
   },
 ];
 
@@ -45,6 +41,11 @@ const INITIAL_VIEW = { lng: -122.35, lat: 48.75, zoom: 10 };
 
 const DEFAULT_COLOR = "#9AA5B1";
 const SUBDIVISION_COLOR = "#116bb1";
+const CITY_FILL_COLOR = "#410138";
+// Shared hover-highlight accent for zoning/subdivision/city borders —
+// same idea as PARCEL_BORDER_HOVER below, kept as one constant since
+// these three layers don't have per-layer selected states to juggle.
+const LAYER_BORDER_HOVER = "#a20f4a";
 
 // Parcel interaction states — border color changes on hover, and on
 // click the border switches to a distinct color plus a translucent fill
@@ -92,7 +93,10 @@ const MapView = forwardRef(function MapView(
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const colorMapRef = useRef(new Map()); // zone_code -> color, assigned once, stable
-  const hoveredParcelIdRef = useRef(null);
+  // Currently hovered feature's {source, sourceLayer, id} — used to
+  // toggle the feature-state "hover" flag that drives border highlight
+  // paint across parcels/zoning/subdivisions/cities.
+  const hoveredFeatureRef = useRef(null);
   const selectedParcelIdRef = useRef(null);
   const mapLoadedRef = useRef(false);
   // Dedupes the info-card hover callback so we only call up to the
@@ -101,7 +105,7 @@ const MapView = forwardRef(function MapView(
   const hoveredInfoKeyRef = useRef(null);
 
   const [layerVisibility, setLayerVisibility] = useState(() =>
-    Object.fromEntries(LAYER_GROUPS.map((g) => [g.key, g.visible])),
+    Object.fromEntries(LAYER_GROUPS.map((g) => [g.key, true])),
   );
 
   useImperativeHandle(ref, () => ({
@@ -135,43 +139,6 @@ const MapView = forwardRef(function MapView(
       applyLayerVisibility(groupKey, next[groupKey]);
       return next;
     });
-  };
-
-  // Looks at whatever zoning features are currently loaded on screen and
-  // assigns any new zone_codes a color (existing ones keep theirs), then
-  // pushes the resulting match expression into the layer paint.
-  const refreshZoneColors = () => {
-    const map = mapRef.current;
-    if (!map || !map.getLayer("zoning-fill")) return;
-
-    const features = map.querySourceFeatures("zoning", {
-      sourceLayer: "zoning_districts",
-    });
-
-    const codes = new Set();
-    for (const f of features) {
-      const code = f.properties?.zone_code;
-      if (code) codes.add(code);
-    }
-
-    const colorMap = colorMapRef.current;
-    let added = false;
-    for (const code of [...codes].sort()) {
-      if (!colorMap.has(code)) {
-        colorMap.set(code, colorForIndex(colorMap.size));
-        added = true;
-      }
-    }
-    if (!added) return;
-
-    const matchExpr = ["match", ["get", "zone_code"]];
-    for (const [code, color] of colorMap.entries()) {
-      matchExpr.push(code, color);
-    }
-    matchExpr.push(DEFAULT_COLOR);
-
-    map.setPaintProperty("zoning-fill", "fill-color", matchExpr);
-    map.setPaintProperty("zoning-outline", "line-color", matchExpr);
   };
 
   useEffect(() => {
@@ -209,6 +176,7 @@ const MapView = forwardRef(function MapView(
         tiles: [`${window.location.origin}/api/tiles/cities/{z}/{x}/{y}.pbf`],
         minzoom: 0,
         maxzoom: 24,
+        promoteId: "id",
       });
 
       map.addLayer({
@@ -228,8 +196,18 @@ const MapView = forwardRef(function MapView(
         source: "cities",
         "source-layer": "cities",
         paint: {
-          "line-color": "#8f052c",
-          "line-width": 2,
+          "line-color": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            LAYER_BORDER_HOVER,
+            "#8f052c",
+          ],
+          "line-width": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            3.5,
+            2,
+          ],
         },
       });
 
@@ -238,6 +216,7 @@ const MapView = forwardRef(function MapView(
         tiles: [`${window.location.origin}/api/tiles/zoning/{z}/{x}/{y}.pbf`],
         minzoom: 0,
         maxzoom: 12,
+        promoteId: "id",
       });
 
       map.addLayer({
@@ -247,8 +226,13 @@ const MapView = forwardRef(function MapView(
         maxzoom: 13.5,
         "source-layer": "zoning_districts",
         paint: {
-          "fill-color": "", // replaced with a per-zone match expr once tiles load
-          "fill-opacity": 0.45,
+          "fill-color": DEFAULT_COLOR, // replaced with a per-zone match expr once tiles load
+          "fill-opacity": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            0.6,
+            0.45,
+          ],
         },
       });
 
@@ -258,8 +242,18 @@ const MapView = forwardRef(function MapView(
         source: "zoning",
         "source-layer": "zoning_districts",
         paint: {
-          "line-color": DEFAULT_COLOR,
-          "line-width": 1,
+          "line-color": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            LAYER_BORDER_HOVER,
+            DEFAULT_COLOR,
+          ],
+          "line-width": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            3,
+            1,
+          ],
         },
       });
 
@@ -362,6 +356,7 @@ const MapView = forwardRef(function MapView(
         ],
         minzoom: SUBDIVISION_MIN_ZOOM,
         maxzoom: 16,
+        promoteId: "id",
       });
 
       map.addLayer({
@@ -372,7 +367,12 @@ const MapView = forwardRef(function MapView(
         minzoom: SUBDIVISION_MIN_ZOOM,
         paint: {
           "fill-color": SUBDIVISION_COLOR,
-          "fill-opacity": 0.15,
+          "fill-opacity": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            0.3,
+            0.15,
+          ],
         },
       });
 
@@ -383,8 +383,18 @@ const MapView = forwardRef(function MapView(
         "source-layer": "subdivisions",
         minzoom: SUBDIVISION_MIN_ZOOM,
         paint: {
-          "line-color": SUBDIVISION_COLOR,
-          "line-width": 2.5,
+          "line-color": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            LAYER_BORDER_HOVER,
+            SUBDIVISION_COLOR,
+          ],
+          "line-width": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            4,
+            2.5,
+          ],
         },
       });
 
@@ -492,82 +502,65 @@ const MapView = forwardRef(function MapView(
         }
       });
 
-      // Hover border — tracked separately from click/selection via its
-      // own feature-state flag so the two can be styled independently.
-      map.on("mousemove", "parcels-fill", (e) => {
-        if (!e.features?.length) return;
-        const id = e.features[0].id;
-        if (hoveredParcelIdRef.current === id) return;
-
-        if (hoveredParcelIdRef.current !== null) {
-          map.setFeatureState(
-            {
-              source: "parcels",
-              sourceLayer: "parcels",
-              id: hoveredParcelIdRef.current,
-            },
-            { hover: false },
-          );
-        }
-        hoveredParcelIdRef.current = id;
-        map.setFeatureState(
-          { source: "parcels", sourceLayer: "parcels", id },
-          { hover: true },
-        );
-      });
-
-      map.on("mouseleave", "parcels-fill", () => {
-        if (hoveredParcelIdRef.current === null) return;
-        map.setFeatureState(
-          {
-            source: "parcels",
-            sourceLayer: "parcels",
-            id: hoveredParcelIdRef.current,
-          },
-          { hover: false },
-        );
-        hoveredParcelIdRef.current = null;
-      });
-
       map.on(
         "mouseenter",
-        ["zoning-fill", "subdivisions-fill", "parcels-fill"],
+        ["zoning-fill", "subdivisions-fill", "parcels-fill", "cities-fill"],
         () => {
           map.getCanvas().style.cursor = "pointer";
         },
       );
       map.on(
         "mouseleave",
-        ["zoning-fill", "subdivisions-fill", "parcels-fill"],
+        ["zoning-fill", "subdivisions-fill", "parcels-fill", "cities-fill"],
         () => {
           map.getCanvas().style.cursor = "";
         },
       );
 
-      // Unified hover reporting for the info card — independent of the
-      // parcel-specific feature-state hover border above. Priority
-      // mirrors the click handler: most specific feature (parcel) wins
-      // over broader ones (subdivision, zoning, city) when they stack.
+      // Unified hover handling — drives both the border highlight
+      // (feature-state "hover", same mechanism the parcel layer already
+      // used) and the info card, for all four interactive layers.
+      // Priority mirrors the click handler: most specific feature
+      // (parcel) wins over broader ones (subdivision, zoning, city)
+      // when they stack on top of each other.
       const HOVER_LAYERS = [
         "parcels-fill",
         "subdivisions-fill",
         "zoning-fill",
         "cities-fill",
       ];
+      // Maps a fill layer id to the source + source-layer its features
+      // need for setFeatureState — each source below is registered with
+      // promoteId: "id" so state keys off that stable id.
+      const HOVER_SOURCE_INFO = {
+        "parcels-fill": { source: "parcels", sourceLayer: "parcels" },
+        "subdivisions-fill": {
+          source: "subdivisions",
+          sourceLayer: "subdivisions",
+        },
+        "zoning-fill": { source: "zoning", sourceLayer: "zoning_districts" },
+        "cities-fill": { source: "cities", sourceLayer: "cities" },
+      };
+
+      const clearHoverBorder = () => {
+        if (!hoveredFeatureRef.current) return;
+        map.setFeatureState(hoveredFeatureRef.current, { hover: false });
+        hoveredFeatureRef.current = null;
+      };
+
       map.on("mousemove", (e) => {
-        if (!onFeatureHover) return;
         const features = map.queryRenderedFeatures(e.point, {
           layers: HOVER_LAYERS,
         });
         const topFeature = [...features].sort(
-          (a, b) =>
-            HOVER_LAYERS.indexOf(a.layer.id) - HOVER_LAYERS.indexOf(b.layer.id),
+          (a, b) => HOVER_LAYERS.indexOf(a.layer.id) - HOVER_LAYERS.indexOf(b.layer.id),
         )[0];
 
         if (!topFeature) {
+          clearHoverBorder();
           if (hoveredInfoKeyRef.current !== null) {
             hoveredInfoKeyRef.current = null;
-            onFeatureHover(null);
+            onFeatureHover?.(null);
           }
           return;
         }
@@ -576,6 +569,22 @@ const MapView = forwardRef(function MapView(
         if (hoveredInfoKeyRef.current === key) return;
         hoveredInfoKeyRef.current = key;
 
+        // Border highlight — swap feature-state hover off the
+        // previously hovered feature and onto this one.
+        clearHoverBorder();
+        const srcInfo = HOVER_SOURCE_INFO[topFeature.layer.id];
+        if (srcInfo && topFeature.id != null) {
+          const target = {
+            source: srcInfo.source,
+            sourceLayer: srcInfo.sourceLayer,
+            id: topFeature.id,
+          };
+          map.setFeatureState(target, { hover: true });
+          hoveredFeatureRef.current = target;
+        }
+
+        // Info card data.
+        if (!onFeatureHover) return;
         const p = topFeature.properties;
         if (topFeature.layer.id === "parcels-fill") {
           onFeatureHover({
@@ -609,6 +618,7 @@ const MapView = forwardRef(function MapView(
       });
 
       map.getCanvas().addEventListener("mouseleave", () => {
+        clearHoverBorder();
         if (hoveredInfoKeyRef.current !== null) {
           hoveredInfoKeyRef.current = null;
           onFeatureHover?.(null);
