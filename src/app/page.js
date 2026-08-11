@@ -74,6 +74,7 @@ export default function Page() {
               setSelected({ kind: "zoning", ...zoning })
             }
             onFeatureHover={setHovered}
+            setSelected={setSelected}
             onError={setLoadError}
           />
 

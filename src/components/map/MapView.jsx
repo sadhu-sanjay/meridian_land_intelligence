@@ -35,7 +35,8 @@ const LAYER_GROUPS = [
 // (Defaulting to Whatcom County, WA to match the existing parcel sync setup.)
 const INITIAL_VIEW = { lng: -122.35, lat: 48.75, zoom: 10 };
 
-const DEFAULT_COLOR = "#9AA5B1";
+const DEFAULT_COLOR = "#9aa5b183";
+const ZONE_OUTLINE_COLOR = "#e5e5e5"; // dark gray for zoning district borders
 const SUBDIVISION_COLOR = "#116bb1";
 // Shared hover-highlight accent for zoning/subdivision/city borders —
 // same idea as PARCEL_BORDER_HOVER below, kept as one constant since
@@ -82,7 +83,7 @@ function colorForIndex(i) {
 // search selection, since the map instance itself no longer lives in
 // page.js.
 const MapView = forwardRef(function MapView(
-  { onParcelClick, onSubdivisionClick, onZoningClick, onError, onFeatureHover },
+  { onParcelClick, onSubdivisionClick, onZoningClick, onError, onFeatureHover, setSelected },
   ref,
 ) {
   const mapContainerRef = useRef(null);
@@ -166,6 +167,7 @@ const MapView = forwardRef(function MapView(
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
     map.on("load", () => {
+
       map.addSource("cities", {
         type: "vector",
         tiles: [`${window.location.origin}/api/tiles/cities/{z}/{x}/{y}.pbf`],
@@ -246,13 +248,13 @@ const MapView = forwardRef(function MapView(
             "case",
             ["boolean", ["feature-state", "hover"], false],
             LAYER_BORDER_HOVER,
-            DEFAULT_COLOR,
+            ZONE_OUTLINE_COLOR,
           ],
           "line-width": [
             "case",
             ["boolean", ["feature-state", "hover"], false],
+            5,
             3,
-            1,
           ],
         },
       });
@@ -430,6 +432,7 @@ const MapView = forwardRef(function MapView(
         )[0];
 
         if (!topFeature) {
+          setSelected(null);
           // Clicked empty space — deselect whatever parcel was highlighted.
           if (selectedParcelIdRef.current !== null) {
             map.setFeatureState(
@@ -448,24 +451,30 @@ const MapView = forwardRef(function MapView(
         // --- NEW GEOMETRY BOUNDING BOX LOGIC ---
         // Native bounds calculation from the clicked feature's geometry
         const bounds = new maplibregl.LngLatBounds();
-        
+
         // MapLibre features can be Polygon or MultiPolygon
         const extractCoords = (coords, isMulti) => {
           if (isMulti) {
-            coords.forEach(poly => poly.forEach(ring => ring.forEach(coord => bounds.extend(coord))));
+            coords.forEach((poly) =>
+              poly.forEach((ring) =>
+                ring.forEach((coord) => bounds.extend(coord)),
+              ),
+            );
           } else {
-            coords.forEach(ring => ring.forEach(coord => bounds.extend(coord)));
+            coords.forEach((ring) =>
+              ring.forEach((coord) => bounds.extend(coord)),
+            );
           }
         };
 
-        if (topFeature.geometry.type === 'Polygon') {
+        if (topFeature.geometry.type === "Polygon") {
           extractCoords(topFeature.geometry.coordinates, false);
-        } else if (topFeature.geometry.type === 'MultiPolygon') {
+        } else if (topFeature.geometry.type === "MultiPolygon") {
           extractCoords(topFeature.geometry.coordinates, true);
         }
 
         if (!bounds.isEmpty()) {
-          // Max zoom caps so small geometries (like a 500sqft parcel) 
+          // Max zoom caps so small geometries (like a 500sqft parcel)
           // don't force the camera into maximum magnification.
           const maxZooms = {
             "parcels-fill": 19,
@@ -478,7 +487,7 @@ const MapView = forwardRef(function MapView(
             padding: 80, // Adds an 80px visual buffer around the polygon
             maxZoom: maxZooms[topFeature.layer.id] || 16,
             duration: 1200,
-            essential: true
+            essential: true,
           });
         }
         // ---------------------------------------
@@ -543,8 +552,8 @@ const MapView = forwardRef(function MapView(
             color: colorMapRef.current.get(zone_code) || DEFAULT_COLOR,
           });
         } else if (topFeature.layer.id === "cities-fill") {
-           // Clear parcel highlights when clicking a city space where there are no smaller geometries
-           if (selectedParcelIdRef.current !== null) {
+          // Clear parcel highlights when clicking a city space where there are no smaller geometries
+          if (selectedParcelIdRef.current !== null) {
             map.setFeatureState(
               {
                 source: "parcels",
