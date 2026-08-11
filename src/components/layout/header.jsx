@@ -81,7 +81,7 @@ export default function Header() {
         <span style={styles.locus}>
           Whatcom County, WA — Chuckanut / Samish Corridor
         </span>
-        <span style={styles.demoPill}>Demo · Sample Dataset</span>
+        {/* <span style={styles.demoPill}>Demo · Sample Dataset</span> */}
       </div>
     </header>
   );
