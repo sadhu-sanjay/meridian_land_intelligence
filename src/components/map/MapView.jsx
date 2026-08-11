@@ -432,6 +432,7 @@ const MapView = forwardRef(function MapView(
         )[0];
 
         if (!topFeature) {
+		// set this to tell parent to dismiss parcell detaill layout
           setSelected(null);
           // Clicked empty space — deselect whatever parcel was highlighted.
           if (selectedParcelIdRef.current !== null) {

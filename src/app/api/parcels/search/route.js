@@ -24,7 +24,7 @@ export async function GET(request) {
       SELECT
         id,
         geo_id,
-        prop_id
+        prop_id,
         name,
         owner_name,
         taxpayer_name,
