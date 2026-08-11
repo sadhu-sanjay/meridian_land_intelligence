@@ -48,7 +48,7 @@ const LAYER_BORDER_HOVER = "#a20f4a";
 // appears (fill stays hidden otherwise, so the base map isn't cluttered
 // with a tint on every parcel).
 const PARCEL_BORDER_DEFAULT = "#c7e009";
-const PARCEL_BORDER_HOVER = "#a20f4a"; // ochre
+const PARCEL_BORDER_HOVER = "rgb(219, 191, 202)"; // ochre
 const PARCEL_BORDER_SELECTED = "#a20f4a"; // brick
 const PARCEL_FILL_SELECTED = "#a20f4a";
 
@@ -83,7 +83,14 @@ function colorForIndex(i) {
 // search selection, since the map instance itself no longer lives in
 // page.js.
 const MapView = forwardRef(function MapView(
-  { onParcelClick, onSubdivisionClick, onZoningClick, onError, onFeatureHover, setSelected },
+  {
+    onParcelClick,
+    onSubdivisionClick,
+    onZoningClick,
+    onError,
+    onFeatureHover,
+    setSelected,
+  },
   ref,
 ) {
   const mapContainerRef = useRef(null);
@@ -99,6 +106,7 @@ const MapView = forwardRef(function MapView(
   // parent when the hovered feature actually changes, not on every
   // pixel of mousemove.
   const hoveredInfoKeyRef = useRef(null);
+  const selectParcelFnRef = useRef(null);
 
   const [layerVisibility, setLayerVisibility] = useState(() =>
     Object.fromEntries(LAYER_GROUPS.map((g) => [g.key, true])),
@@ -107,6 +115,20 @@ const MapView = forwardRef(function MapView(
   useImperativeHandle(ref, () => ({
     flyTo(lng, lat, zoom = 16) {
       mapRef.current?.flyTo({ center: [lng, lat], zoom });
+    },
+
+    selectParcel(id) {
+      const map = mapRef.current;
+      if (!map || !selectParcelFnRef.current) return;
+
+      const trySelect = () => {
+        if (map.isSourceLoaded("parcels")) {
+          selectParcelFnRef.current(id);
+        } else {
+          map.once("idle", trySelect);
+        }
+      };
+      trySelect();
     },
   }));
 
@@ -167,7 +189,6 @@ const MapView = forwardRef(function MapView(
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
     map.on("load", () => {
-
       map.addSource("cities", {
         type: "vector",
         tiles: [`${window.location.origin}/api/tiles/cities/{z}/{x}/{y}.pbf`],
@@ -432,7 +453,7 @@ const MapView = forwardRef(function MapView(
         )[0];
 
         if (!topFeature) {
-		// set this to tell parent to dismiss parcell detaill layout
+          // set this to tell parent to dismiss parcell detaill layout
           setSelected(null);
           // Clicked empty space — deselect whatever parcel was highlighted.
           if (selectedParcelIdRef.current !== null) {
@@ -698,13 +719,36 @@ const MapView = forwardRef(function MapView(
       }
     });
 
+    const clearSelection = () => {
+      if (selectedParcelIdRef.current === null) return;
+      map.setFeatureState(
+        {
+          source: "parcels",
+          sourceLayer: "parcels",
+          id: selectedParcelIdRef.current,
+        },
+        { selected: false },
+      );
+      selectedParcelIdRef.current = null;
+    };
+
+    const selectParcelById = (id) => {
+      if (id === selectedParcelIdRef.current) return;
+      clearSelection();
+      map.setFeatureState(
+        { source: "parcels", sourceLayer: "parcels", id },
+        { selected: true },
+      );
+      selectedParcelIdRef.current = id;
+    };
+
+    selectParcelFnRef.current = selectParcelById; // <-- filled here
+
     map.on("error", (e) => {
       // Surfaces tile/network errors (e.g. DB not reachable) in the UI
       // instead of failing silently.
       if (e?.error?.message) onError?.(e.error.message);
     });
-
-    // map.on("idle", refreshZoneColors);
 
     return () => {
       map.remove();

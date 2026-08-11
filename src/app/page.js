@@ -43,6 +43,7 @@ export default function Page() {
   const handleSearchSelect = (result) => {
     if (result.lng != null && result.lat != null) {
       mapViewRef.current?.flyTo(result.lng, result.lat, 16);
+      mapViewRef.current?.selectParcel(result.id);
     }
     const lngLat =
       result.lng != null && result.lat != null
