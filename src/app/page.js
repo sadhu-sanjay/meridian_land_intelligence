@@ -10,6 +10,7 @@ import MapView, {
 } from "@/components/map/MapView";
 import InfoCard from "@/components/label/InfoCard";
 import "./shell.css";
+import Sidebar from "@/components/layout/Sidebar";
 
 export default function Page() {
   const mapViewRef = useRef(null);
@@ -56,15 +57,12 @@ export default function Page() {
     <div className="app-shell">
       <Header />
       <div className="app-body">
+        <Sidebar
+          searchValue={searchValue}
+          onSearchChange={setSearchValue}
+          onSearchSelect={handleSearchSelect}
+        />
         <div className="map-area">
-          <div className="floating-searchbar">
-            <SearchBar
-              value={searchValue}
-              onChange={setSearchValue}
-              onSelect={handleSearchSelect}
-            />
-          </div>
-
           <MapView
             ref={mapViewRef}
             onParcelClick={loadParcelDetail}
