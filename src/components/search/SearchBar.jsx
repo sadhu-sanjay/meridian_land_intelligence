@@ -67,7 +67,7 @@ export default function SearchBar({ value, onChange, onSelect, placeholder }) {
       <input
         id="searchInput"
         type="text"
-        placeholder={placeholder || "Search parcel, zoning, corridor…"}
+        placeholder={placeholder || "🔍︎  Search an address, place , parcelnumber or lat/lng"}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => results.length > 0 && setOpen(true)}

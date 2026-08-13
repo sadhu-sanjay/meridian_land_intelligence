@@ -9,6 +9,8 @@ import {
 } from "react";
 import maplibregl from "maplibre-gl";
 import LayersControl from "./LayersControl";
+import PolygonAreaControl from "./PolygonAreaControl";
+import { usePolygonAreaSelect } from "./usePolygonAreaSelect";
 
 // Layer groups exposed in the layers panel. Each key maps to the actual
 // maplibre layer ids that get shown/hidden together.
@@ -90,11 +92,17 @@ const MapView = forwardRef(function MapView(
     onError,
     onFeatureHover,
     setSelected,
+    onAreaSelect, // (corners: [lng, lat][4]) => void — fires when a 4-corner area is completed
   },
   ref,
 ) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
+
+  // All area-select map logic (sources/layers/click handling) lives in
+  // this hook — see usePolygonAreaSelect.js. This line plus the guard
+  // in the click handler below are the entire integration surface.
+  const areaSelect = usePolygonAreaSelect({ mapRef, onComplete: onAreaSelect });
   const colorMapRef = useRef(new Map()); // zone_code -> color, assigned once, stable
   // Currently hovered feature's {source, sourceLayer, id} — used to
   // toggle the feature-state "hover" flag that drives border highlight
@@ -186,7 +194,7 @@ const MapView = forwardRef(function MapView(
     });
 
     mapRef.current = map;
-    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    map.addControl(new maplibregl.NavigationControl(), "bottom-right");
 
     map.on("load", () => {
       map.addSource("cities", {
@@ -202,6 +210,8 @@ const MapView = forwardRef(function MapView(
         type: "fill",
         source: "cities",
         "source-layer": "cities",
+	      maxzoom: 15,
+	      maxzoom: 11,
         paint: {
           "fill-color": "#81056e",
           "fill-opacity": [
@@ -440,6 +450,10 @@ const MapView = forwardRef(function MapView(
       });
 
       map.on("click", (e) => {
+        // Area-select is capturing clicks right now — don't also treat
+        // this as a parcel/zoning/subdivision click.
+        if (areaSelect.activeRef.current) return;
+
         const layers = [
           "cities-fill",
           "zoning-fill",
@@ -764,6 +778,7 @@ const MapView = forwardRef(function MapView(
         visibility={layerVisibility}
         onToggle={toggleLayer}
       />
+      <PolygonAreaControl {...areaSelect} />
     </div>
   );
 });
