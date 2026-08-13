@@ -204,72 +204,47 @@
   transform: rotate(45deg) translate(-1px, -1px);
 }
 
+/* ---------- Area / city select ---------- */
+/* Inline dropdown, first section in the sidebar — same dark-input look
+   as the size filter and search box, just a native <select>. */
+
+.area-select-dropdown {
+  position: relative;
+}
+
+.area-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: var(--ink);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  padding: 9px 30px 9px 10px;
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) calc(50% - 2px), calc(100% - 11px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.area-select:focus {
+  border-color: var(--ochre);
+}
+
+.area-select option {
+  background: var(--ink);
+  color: var(--paper);
+}
+
 /* ---------- Size filter ---------- */
 /* Sq ft only — that's how people actually talk about parcel size, so
    there's no unit toggle here. */
-
-.size-filter-slider-row {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* Custom range slider — thumb and filled track use the ochre accent,
-   matching the "active" state color used on quick filters. */
-.size-filter-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 4px;
-  margin: 6px 0;
-  background: var(--hair);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-}
-
-.size-filter-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--ochre);
-  border: 2px solid var(--ink-2);
-  box-shadow: 0 0 0 1px var(--ochre);
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.size-filter-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
-}
-
-.size-filter-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--ochre);
-  border: 2px solid var(--ink-2);
-  box-shadow: 0 0 0 1px var(--ochre);
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.size-filter-slider::-moz-range-thumb:hover {
-  transform: scale(1.1);
-}
-
-.size-filter-slider::-moz-range-track {
-  height: 4px;
-  background: var(--hair);
-  border-radius: 2px;
-}
-
-.size-filter-slider:focus-visible {
-  box-shadow: 0 0 0 3px rgba(212, 149, 63, 0.25); /* ochre-tinted focus ring */
-  border-radius: 2px;
-}
 
 .size-filter-value {
   display: flex;
@@ -299,15 +274,6 @@
   font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
-}
-
-.size-filter-range-labels {
-  display: flex;
-  justify-content: space-between;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--muted);
-  margin-top: -4px;
 }
 
 .size-filter-tolerance {
