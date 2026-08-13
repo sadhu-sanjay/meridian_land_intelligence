@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { ParcelDetailDrawer } from "@/components/parcel/parcel_detail";
 import SearchBar from "@/components/search/SearchBar";
 import Header from "@/components/layout/header";
@@ -19,6 +19,17 @@ export default function Page() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [searchValue, setSearchValue] = useState("");
+  const [areaOptions, setAreaOptions] = useState([]);
+  const [selectedArea, setSelectedArea] = useState("");
+
+  useEffect(() => {
+    fetch("/api/areas")
+      .then((res) => res.json())
+      .then((data) => setAreaOptions(data.areas ?? []))
+      .catch((err) => console.error("failed to load areas:", err));
+  }, []);
+
+  
 
   // Fetches the aggregated parcel record (zoning + acreage + subdivision +
   // value + grade, all resolved server-side) for the clicked parcel id.
@@ -61,6 +72,9 @@ export default function Page() {
           searchValue={searchValue}
           onSearchChange={setSearchValue}
           onSearchSelect={handleSearchSelect}
+          areaOptions={areaOptions}
+          selectedArea={selectedArea}
+          onAreaChange={setSelectedArea}
         />
         <div className="map-area">
           <MapView

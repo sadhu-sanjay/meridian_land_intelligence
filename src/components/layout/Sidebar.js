@@ -26,16 +26,17 @@ const QUICK_FILTERS = [
 // tolerance band (default ±20%) around the entered value.
 const TOLERANCE_PERCENT = 20;
 
-// Slider bounds for the parcel-size control. Investors browsing an area
-// tend to think in round sqft numbers, so we step in increments of 50.
+// Bounds for the parcel-size input.
 const SIZE_MIN = 0;
 const SIZE_MAX = 20000;
-const SIZE_STEP = 50;
 
 export default function Sidebar({
   searchValue,
   onSearchChange,
   onSearchSelect,
+  areaOptions = [], // (string | { value, label })[] — available areas/cities for the dropdown
+  selectedArea, // string — optional, controlled from parent
+  onAreaChange, // (value) => void
   activeQuickFilters, // string[] — optional, controlled from parent
   onQuickFilterChange, // (id[]) => void
   sizeFilter, // { value: string } — optional, controlled from parent; always sqft
@@ -45,10 +46,13 @@ export default function Sidebar({
   // Uncontrolled fallback so this renders standalone before it's wired
   // up to page.js state.
   const [localQuickFilters, setLocalQuickFilters] = useState([]);
-  const [localValue, setLocalValue] = useState("");
+  // Defaults to 600 sqft — the common case investors search for.
+  const [localValue, setLocalValue] = useState("600");
+  const [localArea, setLocalArea] = useState("");
 
   const quickFilters = activeQuickFilters ?? localQuickFilters;
   const value = sizeFilter?.value ?? localValue;
+  const area = selectedArea ?? localArea;
 
   // Multi-select: each button just toggles its own membership in the
   // list, independent of the others.
@@ -56,12 +60,19 @@ export default function Sidebar({
     const next = quickFilters.includes(id)
       ? quickFilters.filter((f) => f !== id)
       : [...quickFilters, id];
-    onQuickFilterChange ? onQuickFilterChange(next) : setLocalQuickFilters(next);
+    onQuickFilterChange
+      ? onQuickFilterChange(next)
+      : setLocalQuickFilters(next);
   };
 
   const handleValueChange = (nextValue) => {
     if (onSizeFilterChange) onSizeFilterChange({ value: nextValue });
     else setLocalValue(nextValue);
+  };
+
+  const handleAreaChange = (nextArea) => {
+    if (onAreaChange) onAreaChange(nextArea);
+    else setLocalArea(nextArea);
   };
 
   // Preview text: just the tolerance band in sqft, since that's the
@@ -79,8 +90,6 @@ export default function Sidebar({
     };
   }, [value]);
 
-  const sliderValue = value === "" || value == null ? SIZE_MIN : Number(value);
-
   const handleSearchClick = () => {
     if (!onSearch) return;
     onSearch({
@@ -94,12 +103,25 @@ export default function Sidebar({
     });
   };
 
-  // The area search floats top-right, independent of the sidebar column,
-  // so it needs to render as a sibling of <aside> rather than inside it.
-  // Its positioning is relative to .app-shell (position: relative), so it
-  // sits above whatever's underneath — normally the map area.
+  // The area *search* box (address/place autocomplete) floats top-right,
+  // independent of the sidebar column, so it renders as a sibling of
+  // <aside> rather than inside it — positioned relative to .app-shell
+  // (position: relative), sitting above whatever's underneath (normally
+  // the map area). The area/city *dropdown* is a separate control and
+  // lives inline as the first section of the sidebar itself.
   return (
     <>
+      <style>{`
+        .size-filter-input-no-spinner::-webkit-outer-spin-button,
+        .size-filter-input-no-spinner::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .size-filter-input-no-spinner {
+          -moz-appearance: textfield;
+        }
+      `}</style>
+
       <div className="area-search-float">
         {/* <p className="eyebrow">Area</p>
         <p className="section-hint">
@@ -115,43 +137,55 @@ export default function Sidebar({
       </div>
 
       <aside className="sidebar">
+        {/* Area / city */}
+        <div className="sidebar-section">
+          <p className="eyebrow">Area</p>
+          <div className="area-select-dropdown">
+            <select
+              className="area-select"
+              value={area}
+              onChange={(e) => handleAreaChange(e.target.value)}
+              aria-label="Select an area or city"
+            >
+              <option value="" disabled>
+                Select an area or city
+              </option>
+              {areaOptions.map((opt) => {
+                const optValue = typeof opt === "string" ? opt : opt.value;
+                const optLabel = typeof opt === "string" ? opt : opt.label;
+                return (
+                  <option key={optValue} value={optValue}>
+                    {optLabel}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
+
         {/* Parcel size */}
         <div className="sidebar-section">
           <p className="eyebrow">Parcel Size</p>
 
-          <div className="size-filter-slider-row">
+          <div className="size-filter-value">
             <input
-              type="range"
-              className="size-filter-slider"
+              type="number"
+              className="size-filter-input-no-spinner"
               min={SIZE_MIN}
               max={SIZE_MAX}
-              step={SIZE_STEP}
-              value={sliderValue}
+              placeholder="e.g. 600"
+              value={value}
               onChange={(e) => handleValueChange(e.target.value)}
-              aria-label="Parcel size in square feet"
             />
-            <div className="size-filter-value">
-              <input
-                type="number"
-                min={SIZE_MIN}
-                max={SIZE_MAX}
-                step={SIZE_STEP}
-                placeholder="e.g. 600"
-                value={value}
-                onChange={(e) => handleValueChange(e.target.value)}
-              />
-              <span className="size-filter-unit-label">sq ft</span>
-            </div>
-          </div>
-
-          <div className="size-filter-range-labels">
-            <span>{SIZE_MIN.toLocaleString()}</span>
-            <span>{SIZE_MAX.toLocaleString()}+</span>
+            <span className="size-filter-unit-label">sq ft</span>
           </div>
 
           {sizePreview && (
             <p className="size-filter-tolerance">
-              About <b>{sizePreview.lowSqft}–{sizePreview.highSqft} sq ft</b>{" "}
+              About{" "}
+              <b>
+                {sizePreview.lowSqft}–{sizePreview.highSqft} sq ft
+              </b>{" "}
               (±{TOLERANCE_PERCENT}%)
             </p>
           )}
@@ -160,7 +194,9 @@ export default function Sidebar({
         {/* Property type */}
         <div className="sidebar-section">
           <p className="eyebrow">Property Type</p>
-          <p className="section-hint">Vacant lot, vacant structure, or residential.</p>
+          <p className="section-hint">
+            Vacant lot, vacant structure, or residential.
+          </p>
           <div className="quick-filters">
             {QUICK_FILTERS.map((qf) => {
               const isActive = quickFilters.includes(qf.id);

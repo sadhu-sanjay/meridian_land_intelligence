@@ -210,8 +210,8 @@ const MapView = forwardRef(function MapView(
         type: "fill",
         source: "cities",
         "source-layer": "cities",
-	      maxzoom: 15,
-	      maxzoom: 11,
+        maxzoom: 15,
+        maxzoom: 11,
         paint: {
           "fill-color": "#81056e",
           "fill-opacity": [
