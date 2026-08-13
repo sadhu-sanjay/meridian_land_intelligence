@@ -778,7 +778,7 @@ const MapView = forwardRef(function MapView(
         visibility={layerVisibility}
         onToggle={toggleLayer}
       />
-      <PolygonAreaControl {...areaSelect} />
+      {/* <PolygonAreaControl {...areaSelect} /> */}
     </div>
   );
 });

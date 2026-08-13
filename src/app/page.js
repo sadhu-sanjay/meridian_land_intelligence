@@ -2,12 +2,8 @@
 
 import { useRef, useState, useEffect } from "react";
 import { ParcelDetailDrawer } from "@/components/parcel/parcel_detail";
-import SearchBar from "@/components/search/SearchBar";
 import Header from "@/components/layout/header";
-import MapView, {
-  DEFAULT_COLOR,
-  SUBDIVISION_COLOR,
-} from "@/components/map/MapView";
+import MapView from "@/components/map/MapView";
 import InfoCard from "@/components/label/InfoCard";
 import "./shell.css";
 import Sidebar from "@/components/layout/Sidebar";

@@ -14,7 +14,7 @@
 const CARD_STYLE = {
   position: "absolute",
   top: 10,
-  right: 54,
+  left: 10,
   background: "var(--ink-2)",
   color: "var(--paper)",
   padding: "10px 14px",

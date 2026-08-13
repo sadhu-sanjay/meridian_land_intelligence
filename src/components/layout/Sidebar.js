@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import SearchBar from "@/components/search/SearchBar";
+import AreaSelectIcon from "@/components/icons/AreaSelectIcon";
 
 const QUICK_FILTERS = [
   {
@@ -49,6 +50,23 @@ export default function Sidebar({
   // Defaults to 600 sqft — the common case investors search for.
   const [localValue, setLocalValue] = useState("600");
   const [localArea, setLocalArea] = useState("");
+  const [mapSelectActive, setMapSelectActive] = useState(false);
+  const handleMapSelectClick = () => {
+    const next = !mapSelectActive;
+    setMapSelectActive(next);
+    if (next) {
+      // Picking map mode clears whatever city was selected
+      handleAreaChange("");
+    }
+  };
+
+  const handleAreaSelectChange = (nextArea) => {
+    handleAreaChange(nextArea);
+    if (nextArea) {
+      // Picking a city turns map mode off
+      setMapSelectActive(false);
+    }
+  };
 
   const quickFilters = activeQuickFilters ?? localQuickFilters;
   const value = sizeFilter?.value ?? localValue;
@@ -137,29 +155,45 @@ export default function Sidebar({
       </div>
 
       <aside className="sidebar">
-        {/* Area / city */}
+        {/* Area — pick a city, or draw one on the map. Mutually exclusive. */}
         <div className="sidebar-section">
           <p className="eyebrow">Area</p>
-          <div className="area-select-dropdown">
-            <select
-              className="area-select"
-              value={area}
-              onChange={(e) => handleAreaChange(e.target.value)}
-              aria-label="Select an area or city"
+          <div className="area-choice-row">
+            <button
+              type="button"
+              className={`map-select-btn${mapSelectActive ? " active" : ""}`}
+              onClick={handleMapSelectClick}
+              aria-pressed={mapSelectActive}
+              title="Draw a custom boundary on the map"
             >
-              <option value="" disabled>
-                Select an area or city
-              </option>
-              {areaOptions.map((opt) => {
-                const optValue = typeof opt === "string" ? opt : opt.value;
-                const optLabel = typeof opt === "string" ? opt : opt.label;
-                return (
-                  <option key={optValue} value={optValue}>
-                    {optLabel}
-                  </option>
-                );
-              })}
-            </select>
+              <AreaSelectIcon active={mapSelectActive} />
+              <span>Select on Map</span>
+            </button>
+
+            <span className="area-choice-or">or</span>
+
+            <div className="area-select-dropdown">
+              <select
+                className="area-select"
+                value={area}
+                onChange={(e) => handleAreaSelectChange(e.target.value)}
+                disabled={mapSelectActive}
+                aria-label="Select an area or city"
+              >
+                <option value="" disabled>
+                  Select a city
+                </option>
+                {areaOptions.map((opt) => {
+                  const optValue = typeof opt === "string" ? opt : opt.value;
+                  const optLabel = typeof opt === "string" ? opt : opt.label;
+                  return (
+                    <option key={optValue} value={optValue}>
+                      {optLabel}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
           </div>
         </div>
 
