@@ -61,8 +61,8 @@ export default function LayersControl({ groups, visibility, onToggle }) {
         aria-label="Toggle layers panel"
         aria-expanded={open}
         style={{
-          width: 42,
-          height: 42,
+          width: 36,
+          height: 36,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
