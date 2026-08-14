@@ -178,7 +178,7 @@ export default function Sidebar({
             className="sidebar-clear-all-btn"
             onClick={handleClearAll}
           >
-            Clear All
+             Clear All ✕
           </button>
         </div>
 
