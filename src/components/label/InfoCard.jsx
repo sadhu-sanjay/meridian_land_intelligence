@@ -63,6 +63,9 @@ function renderBody(info) {
               {Number(info.acreage).toFixed(2)} acres
             </div>
           )}
+          <strong style={{ color: "var(--ochre)", fontWeight: 700, marginTop: 4, display: "block" }}>
+            A subdivision
+          </strong>
         </>
       );
     case "city":

@@ -235,7 +235,7 @@ export default function Sidebar({
 
         {/* Parcel size */}
         <div className="sidebar-section">
-          <p className="eyebrow">Parcel Size</p>
+          <p className="eyebrow">Land Size</p>
 
           <div className="size-filter-value">
             <input

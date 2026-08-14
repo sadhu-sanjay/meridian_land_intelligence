@@ -55,10 +55,10 @@ export default function Page() {
     setMapAreaSelection({ corners, ...stats });
     setMapSelectActive(false);
   };
-
   const handleClearMapSelection = () => {
     setMapAreaSelection(null);
-    mapViewRef.current?.cancelAreaSelect(); // also wipes the drawn shape on the map
+    setSearchResults(null); // drop stale search dots so base layers reappear
+    mapViewRef.current?.cancelAreaSelect();
   };
 
   useEffect(() => {

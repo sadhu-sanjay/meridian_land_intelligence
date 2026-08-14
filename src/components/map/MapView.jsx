@@ -67,15 +67,6 @@ const ZONE_LABEL_MIN_ZOOM = 10;
 const SUBDIVISION_MIN_ZOOM = 11;
 const SUBDIVISION_LABEL_MIN_ZOOM = 13;
 
-// Deterministic, maximally-spread color per index using the golden-angle
-// hue rotation — the Nth zone_code always gets the same color, and
-// neighboring indices land far apart on the color wheel so adjacent
-// legend entries stay visually distinct even with 20+ zones.
-function colorForIndex(i) {
-  const hue = (i * 137.508) % 360;
-  return `hsl(${hue.toFixed(0)}, 65%, 55%)`;
-}
-
 // Owns the maplibre instance, all sources/layers, and map-level
 // interactions (click, hover, zone coloring). Reports selections up via
 // callback props rather than owning "selected" state itself — page.js
@@ -122,22 +113,29 @@ const MapView = forwardRef(function MapView(
     Object.fromEntries(LAYER_GROUPS.map((g) => [g.key, true])),
   );
 
-  // While the user is actively drawing a polygon (areaSelect.active),
-  // hide every layer group so clicking to place a corner doesn't
-  // accidentally trigger a parcel/zoning/subdivision hover or click
-  // underneath the crosshair. Once drawing stops, restore each group
-  // to whatever visibility it had *before* drawing started — so if the
-  // user had, say, zoning turned off in the layers panel, it stays off
-  // afterward instead of this blindly turning everything back on.
+  // True whenever there's a search result and/or a selected area sitting
+  // on the map — either should take over the view on its own, without
+  // cities/zoning/subdivisions cluttering things underneath.
+  const hasSearchResults = (searchResults?.parcels?.length ?? 0) > 0;
+  const hasCompletedSelection =
+    areaSelect.pointCount === 4 && !areaSelect.active;
+  const hasMapOverlay =
+    areaSelect.active || hasCompletedSelection || hasSearchResults;
+
   useEffect(() => {
     for (const group of LAYER_GROUPS) {
       if (areaSelect.active) {
         applyLayerVisibility(group.key, false);
+      } else if (hasMapOverlay) {
+        applyLayerVisibility(
+          group.key,
+          group.key === "parcels" && hasSearchResults,
+        );
       } else {
         applyLayerVisibility(group.key, layerVisibility[group.key]);
       }
     }
-  }, [areaSelect.active, layerVisibility]);
+  }, [areaSelect.active, hasMapOverlay, hasSearchResults, layerVisibility]);
 
   // Report drawing state up so an external control (Sidebar) can
   // reflect/trigger it without owning any map logic itself.
@@ -148,22 +146,50 @@ const MapView = forwardRef(function MapView(
     });
   }, [areaSelect.active, areaSelect.pointCount, onAreaSelectStateChange]);
 
+  // Tracks which parcel ids currently carry the "matched" feature-state,
+  // so a new search (or a cleared one) can unset exactly the previous
+  // set before applying the next — same pattern as selectedParcelIdRef,
+  // just for a set of ids instead of one.
+  const matchedParcelIdsRef = useRef(new Set());
+
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.getSource("search-results")) return;
+    if (!map || !mapLoadedRef.current || !map.getSource("parcels")) return;
 
-    const features = (searchResults?.parcels ?? [])
-      .filter((p) => p.centroid)
-      .map((p) => ({
-        type: "Feature",
-        geometry: JSON.parse(p.centroid),
-        properties: { id: p.id, name: p.name, acreage: p.acreage },
-      }));
+    // Clear whatever was highlighted from the previous search.
+    for (const id of matchedParcelIdsRef.current) {
+      map.setFeatureState(
+        { source: "parcels", sourceLayer: "parcels", id },
+        { matched: false },
+      );
+    }
+    matchedParcelIdsRef.current = new Set();
 
-    map.getSource("search-results").setData({
-      type: "FeatureCollection",
-      features,
-    });
+    const parcels = searchResults?.parcels ?? [];
+    if (parcels.length === 0) return;
+
+    const bounds = new maplibregl.LngLatBounds();
+    for (const p of parcels) {
+      matchedParcelIdsRef.current.add(p.id);
+      map.setFeatureState(
+        { source: "parcels", sourceLayer: "parcels", id: p.id },
+        { matched: true },
+      );
+      if (p.centroid) bounds.extend(JSON.parse(p.centroid).coordinates);
+    }
+
+    // Zoom to fit the matches. Parcel geometry only renders at
+    // PARCEL_MIN_ZOOM+, so if fitBounds lands below that (a wide spread
+    // of results) nudge back up to it once the camera settles —
+    // otherwise the highlighted parcels would be invisible.
+    if (!bounds.isEmpty()) {
+      map.fitBounds(bounds, { padding: 80, maxZoom: 18, duration: 1000 });
+      map.once("moveend", () => {
+        if (map.getZoom() < PARCEL_MIN_ZOOM) {
+          map.easeTo({ zoom: PARCEL_MIN_ZOOM });
+        }
+      });
+    }
   }, [searchResults]);
 
   useImperativeHandle(ref, () => ({
@@ -250,24 +276,6 @@ const MapView = forwardRef(function MapView(
     map.addControl(new maplibregl.NavigationControl(), "bottom-right");
 
     map.on("load", () => {
-      // in the same map.on("load", ...) block where other sources are added
-      map.addSource("search-results", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
-
-      map.addLayer({
-        id: "search-results-point",
-        type: "circle",
-        source: "search-results",
-        paint: {
-          "circle-radius": 7,
-          "circle-color": "#e6161396",
-          "circle-stroke-color": "#000",
-          "circle-stroke-width": 1.5,
-        },
-      });
-
       map.addSource("cities", {
         type: "vector",
         tiles: [`${window.location.origin}/api/tiles/cities/{z}/{x}/{y}.pbf`],
@@ -282,7 +290,7 @@ const MapView = forwardRef(function MapView(
         source: "cities",
         "source-layer": "cities",
         maxzoom: 15,
-        maxzoom: 11,
+        minzoom: 11,
         paint: {
           "fill-color": "#81056e",
           "fill-opacity": [
@@ -397,7 +405,11 @@ const MapView = forwardRef(function MapView(
         paint: {
           "line-color": [
             "case",
-            ["boolean", ["feature-state", "selected"], false],
+            [
+              "any",
+              ["boolean", ["feature-state", "selected"], false],
+              ["boolean", ["feature-state", "matched"], false],
+            ],
             PARCEL_BORDER_SELECTED,
             ["boolean", ["feature-state", "hover"], false],
             PARCEL_BORDER_HOVER,
@@ -405,7 +417,11 @@ const MapView = forwardRef(function MapView(
           ],
           "line-width": [
             "case",
-            ["boolean", ["feature-state", "selected"], false],
+            [
+              "any",
+              ["boolean", ["feature-state", "selected"], false],
+              ["boolean", ["feature-state", "matched"], false],
+            ],
             4.5,
             ["boolean", ["feature-state", "hover"], false],
             5,
@@ -427,7 +443,11 @@ const MapView = forwardRef(function MapView(
           "fill-color": PARCEL_FILL_SELECTED,
           "fill-opacity": [
             "case",
-            ["boolean", ["feature-state", "selected"], false],
+            [
+              "any",
+              ["boolean", ["feature-state", "selected"], false],
+              ["boolean", ["feature-state", "matched"], false],
+            ],
             0.2,
             0,
           ],
@@ -491,7 +511,7 @@ const MapView = forwardRef(function MapView(
             "case",
             ["boolean", ["feature-state", "hover"], false],
             LAYER_BORDER_HOVER,
-            SUBDIVISION_COLOR,
+            PARCEL_BORDER_DEFAULT,
           ],
           "line-width": [
             "case",
