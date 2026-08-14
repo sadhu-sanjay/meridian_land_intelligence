@@ -31,6 +31,24 @@
   margin: 6px;
   border-bottom: 1px solid var(--hair);
   padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-clear-all-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.15s ease;
+}
+
+.sidebar-clear-all-btn:hover {
+  color: var(--ochre);
 }
 
 .sidebar-title {

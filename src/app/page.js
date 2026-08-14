@@ -25,6 +25,11 @@ export default function Page() {
   const [searchResults, setSearchResults] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
 
+  const handleClearSearch = () => {
+    setSearchValue("");
+    setSearchResults(null);
+  };
+
   // This function is passed to <Sidebar onSearch={...}> — Sidebar calls it
   // with { searchValue, quickFilters, sizeFilter } whenever the Search
   // button is clicked (see Sidebar's handleSearchClick).
@@ -138,6 +143,7 @@ export default function Page() {
           onClearMapSelection={handleClearMapSelection}
           onSearch={handleSearch}
           searchLoading={searchLoading}
+          onClearSearch={handleClearSearch}
         />
 
         <div className="map-area">

@@ -49,6 +49,7 @@ export default function Sidebar({
   mapAreaSelection, // { acres, sqft } | null — persists after drawing completes
   onClearMapSelection,
   searchLoading,
+  onClearSearch,
 }) {
   // Uncontrolled fallback so this renders standalone before it's wired
   // up to page.js state.
@@ -126,6 +127,16 @@ export default function Sidebar({
     });
   };
 
+  const handleClearAll = () => {
+    // Reset every "Find Parcels" input back to its default state.
+    onQuickFilterChange ? onQuickFilterChange([]) : setLocalQuickFilters([]);
+    handleValueChange("5000");
+    handleAreaChange("");
+    if (mapActive) handleMapSelectClick(); // cancel an in-progress draw too
+    onClearMapSelection?.();
+    onClearSearch?.();
+  };
+
   // The area *search* box (address/place autocomplete) floats top-right,
   // independent of the sidebar column, so it renders as a sibling of
   // <aside> rather than inside it — positioned relative to .app-shell
@@ -162,6 +173,13 @@ export default function Sidebar({
       <aside className="sidebar">
         <div className="sidebar-header">
           <h3 className="sidebar-title">Find Parcels</h3>
+          <button
+            type="button"
+            className="sidebar-clear-all-btn"
+            onClick={handleClearAll}
+          >
+            Clear All
+          </button>
         </div>
 
         {/* Area — pick a city, or draw one on the map. Mutually exclusive. */}
