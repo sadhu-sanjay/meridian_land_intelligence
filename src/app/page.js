@@ -7,6 +7,7 @@ import MapView from "@/components/map/MapView";
 import InfoCard from "@/components/label/InfoCard";
 import "./shell.css";
 import Sidebar from "@/components/layout/Sidebar";
+import { computeAreaStats } from "@/lib/geo";
 
 export default function Page() {
   const mapViewRef = useRef(null);
@@ -17,6 +18,19 @@ export default function Page() {
   const [searchValue, setSearchValue] = useState("");
   const [areaOptions, setAreaOptions] = useState([]);
   const [selectedArea, setSelectedArea] = useState("");
+  const [mapSelectActive, setMapSelectActive] = useState(false);
+  const [mapAreaSelection, setMapAreaSelection] = useState(null); // { corners, acres, sqft } | null
+
+  const handleAreaSelectComplete = (corners) => {
+    const stats = computeAreaStats(corners);
+    setMapAreaSelection({ corners, ...stats });
+    setMapSelectActive(false);
+  };
+
+  const handleClearMapSelection = () => {
+    setMapAreaSelection(null);
+    mapViewRef.current?.cancelAreaSelect(); // also wipes the drawn shape on the map
+  };
 
   useEffect(() => {
     fetch("/api/areas")
@@ -24,8 +38,6 @@ export default function Page() {
       .then((data) => setAreaOptions(data.areas ?? []))
       .catch((err) => console.error("failed to load areas:", err));
   }, []);
-
-  
 
   // Fetches the aggregated parcel record (zoning + acreage + subdivision +
   // value + grade, all resolved server-side) for the clicked parcel id.
@@ -60,6 +72,22 @@ export default function Page() {
     loadParcelDetail(result.id, lngLat);
   };
 
+  // Map reports its real active/pointCount state back — this is the
+  // source of truth (also covers the case where the user finishes/cancels
+  // via the floating map control instead of the sidebar button).
+  const handleAreaSelectStateChange = ({ active }) => {
+    setMapSelectActive(active);
+  };
+
+  const handleMapSelectToggle = () => {
+    if (mapSelectActive) {
+      mapViewRef.current?.cancelAreaSelect();
+    } else {
+      setSelectedArea(""); // mutual exclusivity: drawing cancels the city pick
+      mapViewRef.current?.startAreaSelect();
+    }
+  };
+
   return (
     <div className="app-shell">
       <Header />
@@ -71,7 +99,12 @@ export default function Page() {
           areaOptions={areaOptions}
           selectedArea={selectedArea}
           onAreaChange={setSelectedArea}
+          mapSelectActive={mapSelectActive}
+          onMapSelectToggle={handleMapSelectToggle}
+          mapAreaSelection={mapAreaSelection}
+          onClearMapSelection={handleClearMapSelection}
         />
+
         <div className="map-area">
           <MapView
             ref={mapViewRef}
@@ -85,6 +118,8 @@ export default function Page() {
             onFeatureHover={setHovered}
             setSelected={setSelected}
             onError={setLoadError}
+            onAreaSelect={handleAreaSelectComplete}
+            onAreaSelectStateChange={handleAreaSelectStateChange}
           />
 
           <InfoCard info={hovered} />

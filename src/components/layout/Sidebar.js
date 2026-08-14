@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import SearchBar from "@/components/search/SearchBar";
 import AreaSelectIcon from "@/components/icons/AreaSelectIcon";
+import { cornersToThumbnailPoints } from "@/lib/geo";
 
 const QUICK_FILTERS = [
   {
@@ -35,42 +36,36 @@ export default function Sidebar({
   searchValue,
   onSearchChange,
   onSearchSelect,
-  areaOptions = [], // (string | { value, label })[] — available areas/cities for the dropdown
-  selectedArea, // string — optional, controlled from parent
-  onAreaChange, // (value) => void
-  activeQuickFilters, // string[] — optional, controlled from parent
-  onQuickFilterChange, // (id[]) => void
-  sizeFilter, // { value: string } — optional, controlled from parent; always sqft
-  onSizeFilterChange, // ({ value }) => void
-  onSearch, // ({ searchValue, quickFilters, sizeFilter }) => void — fired by the Search button
+  areaOptions = [],
+  selectedArea,
+  onAreaChange,
+  mapSelectActive, // boolean — optional, controlled from parent (reflects real map draw state)
+  onMapSelectToggle, // () => void — parent starts/cancels the map draw tool
+  activeQuickFilters,
+  onQuickFilterChange,
+  sizeFilter,
+  onSizeFilterChange,
+  onSearch,
+  mapAreaSelection, // { acres, sqft } | null — persists after drawing completes
+  onClearMapSelection,
 }) {
   // Uncontrolled fallback so this renders standalone before it's wired
   // up to page.js state.
   const [localQuickFilters, setLocalQuickFilters] = useState([]);
-  // Defaults to 600 sqft — the common case investors search for.
   const [localValue, setLocalValue] = useState("600");
   const [localArea, setLocalArea] = useState("");
-  const [mapSelectActive, setMapSelectActive] = useState(false);
-  const handleMapSelectClick = () => {
-    const next = !mapSelectActive;
-    setMapSelectActive(next);
-    if (next) {
-      // Picking map mode clears whatever city was selected
-      handleAreaChange("");
-    }
-  };
-
-  const handleAreaSelectChange = (nextArea) => {
-    handleAreaChange(nextArea);
-    if (nextArea) {
-      // Picking a city turns map mode off
-      setMapSelectActive(false);
-    }
-  };
+  const [localMapSelectActive, setLocalMapSelectActive] = useState(false);
 
   const quickFilters = activeQuickFilters ?? localQuickFilters;
   const value = sizeFilter?.value ?? localValue;
   const area = selectedArea ?? localArea;
+  const mapActive = mapSelectActive ?? localMapSelectActive;
+  const hasSelection = Boolean(mapAreaSelection);
+
+  const thumbnailPoints = useMemo(
+    () => cornersToThumbnailPoints(mapAreaSelection?.corners),
+    [mapAreaSelection],
+  );
 
   // Multi-select: each button just toggles its own membership in the
   // list, independent of the others.
@@ -89,8 +84,17 @@ export default function Sidebar({
   };
 
   const handleAreaChange = (nextArea) => {
-    if (onAreaChange) onAreaChange(nextArea);
-    else setLocalArea(nextArea);
+    onAreaChange ? onAreaChange(nextArea) : setLocalArea(nextArea);
+  };
+
+  const handleMapSelectClick = () => {
+    if (onMapSelectToggle) onMapSelectToggle();
+    else setLocalMapSelectActive((v) => !v);
+  };
+
+  const handleAreaSelectChange = (nextArea) => {
+    handleAreaChange(nextArea);
+    if (nextArea && mapActive) handleMapSelectClick(); // picking a city cancels map mode
   };
 
   // Preview text: just the tolerance band in sqft, since that's the
@@ -155,19 +159,27 @@ export default function Sidebar({
       </div>
 
       <aside className="sidebar">
+
+        <div className="sidebar-header">
+          <h3 className="sidebar-title">Find Parcels</h3>
+        </div>
+
         {/* Area — pick a city, or draw one on the map. Mutually exclusive. */}
         <div className="sidebar-section">
           <p className="eyebrow">Area</p>
           <div className="area-choice-row">
             <button
               type="button"
-              className={`map-select-btn${mapSelectActive ? " active" : ""}`}
+              className={`map-select-btn${mapActive ? " active" : ""}${hasSelection ? " has-selection" : ""}`}
               onClick={handleMapSelectClick}
-              aria-pressed={mapSelectActive}
+              aria-pressed={mapActive}
               title="Draw a custom boundary on the map"
             >
-              <AreaSelectIcon active={mapSelectActive} />
+              <AreaSelectIcon active={mapActive || hasSelection} />
               <span>Select on Map</span>
+              {hasSelection && !mapActive && (
+                <span className="map-select-badge" aria-hidden="true" />
+              )}
             </button>
 
             <span className="area-choice-or">or</span>
@@ -177,7 +189,7 @@ export default function Sidebar({
                 className="area-select"
                 value={area}
                 onChange={(e) => handleAreaSelectChange(e.target.value)}
-                disabled={mapSelectActive}
+                disabled={mapActive}
                 aria-label="Select an area or city"
               >
                 <option value="" disabled>
@@ -195,6 +207,29 @@ export default function Sidebar({
               </select>
             </div>
           </div>
+          {mapAreaSelection && (
+            <div className="map-selection-info">
+              <svg
+                className="map-selection-thumb"
+                width="56"
+                height="56"
+                viewBox="0 0 56 56"
+                aria-hidden="true"
+              >
+                <polygon points={thumbnailPoints} />
+              </svg>
+              <div className="map-selection-text">
+                <p className="map-selection-label">Custom area selected</p>
+                <button
+                  type="button"
+                  className="map-selection-clear"
+                  onClick={onClearMapSelection}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Parcel size */}

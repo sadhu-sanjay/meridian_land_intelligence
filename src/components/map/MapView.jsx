@@ -93,6 +93,7 @@ const MapView = forwardRef(function MapView(
     onFeatureHover,
     setSelected,
     onAreaSelect, // (corners: [lng, lat][4]) => void — fires when a 4-corner area is completed
+    onAreaSelectStateChange,
   },
   ref,
 ) {
@@ -120,6 +121,15 @@ const MapView = forwardRef(function MapView(
     Object.fromEntries(LAYER_GROUPS.map((g) => [g.key, true])),
   );
 
+  // Report drawing state up so an external control (Sidebar) can
+  // reflect/trigger it without owning any map logic itself.
+  useEffect(() => {
+    onAreaSelectStateChange?.({
+      active: areaSelect.active,
+      pointCount: areaSelect.pointCount,
+    });
+  }, [areaSelect.active, areaSelect.pointCount, onAreaSelectStateChange]);
+
   useImperativeHandle(ref, () => ({
     flyTo(lng, lat, zoom = 16) {
       mapRef.current?.flyTo({ center: [lng, lat], zoom });
@@ -138,6 +148,14 @@ const MapView = forwardRef(function MapView(
       };
       trySelect();
     },
+
+    startAreaSelect() {
+      areaSelect.start();
+    },
+    cancelAreaSelect() {
+      areaSelect.cancel();
+    },
+
   }));
 
   // Applies a group's on/off state to its underlying maplibre layers.
@@ -778,7 +796,7 @@ const MapView = forwardRef(function MapView(
         visibility={layerVisibility}
         onToggle={toggleLayer}
       />
-      {/* <PolygonAreaControl {...areaSelect} /> */}
+      <PolygonAreaControl {...areaSelect} />
     </div>
   );
 });

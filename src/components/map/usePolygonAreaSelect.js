@@ -105,11 +105,20 @@ export function usePolygonAreaSelect({ mapRef, onComplete }) {
   }, [render]);
 
   useEffect(() => {
+  let cancelled = false;
+  let detachClick = null;
+
+  const trySetup = () => {
+    if (cancelled) return; // stale poll from a previous (cleaned-up) mount — do nothing
+
     const map = mapRef.current;
-    if (!map) return;
+    if (!map) {
+      requestAnimationFrame(trySetup);
+      return;
+    }
 
     const addLayersAndSources = () => {
-      if (map.getSource(SRC_FILL)) return; // effect re-ran, already set up
+      if (map.getSource(SRC_FILL)) return;
 
       map.addSource(SRC_FILL, { type: "geojson", data: emptyFC() });
       map.addLayer({
@@ -166,8 +175,16 @@ export function usePolygonAreaSelect({ mapRef, onComplete }) {
     };
 
     map.on("click", handleClick);
-    return () => map.off("click", handleClick);
-  }, [mapRef, render]);
+    detachClick = () => map.off("click", handleClick);
+  };
 
+  trySetup();
+
+  return () => {
+    cancelled = true;
+    detachClick?.();
+  };
+}, [mapRef, render]);
+  
   return { active, activeRef, pointCount, start, cancel, undo };
 }
