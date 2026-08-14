@@ -94,6 +94,7 @@ const MapView = forwardRef(function MapView(
     setSelected,
     onAreaSelect, // (corners: [lng, lat][4]) => void — fires when a 4-corner area is completed
     onAreaSelectStateChange,
+    searchResults, // array of {id, lng, lat, ...} from the search API — used to highlight search results on the map
   },
   ref,
 ) {
@@ -121,6 +122,23 @@ const MapView = forwardRef(function MapView(
     Object.fromEntries(LAYER_GROUPS.map((g) => [g.key, true])),
   );
 
+  // While the user is actively drawing a polygon (areaSelect.active),
+  // hide every layer group so clicking to place a corner doesn't
+  // accidentally trigger a parcel/zoning/subdivision hover or click
+  // underneath the crosshair. Once drawing stops, restore each group
+  // to whatever visibility it had *before* drawing started — so if the
+  // user had, say, zoning turned off in the layers panel, it stays off
+  // afterward instead of this blindly turning everything back on.
+  useEffect(() => {
+    for (const group of LAYER_GROUPS) {
+      if (areaSelect.active) {
+        applyLayerVisibility(group.key, false);
+      } else {
+        applyLayerVisibility(group.key, layerVisibility[group.key]);
+      }
+    }
+  }, [areaSelect.active, layerVisibility]);
+
   // Report drawing state up so an external control (Sidebar) can
   // reflect/trigger it without owning any map logic itself.
   useEffect(() => {
@@ -129,6 +147,24 @@ const MapView = forwardRef(function MapView(
       pointCount: areaSelect.pointCount,
     });
   }, [areaSelect.active, areaSelect.pointCount, onAreaSelectStateChange]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.getSource("search-results")) return;
+
+    const features = (searchResults?.parcels ?? [])
+      .filter((p) => p.centroid)
+      .map((p) => ({
+        type: "Feature",
+        geometry: JSON.parse(p.centroid),
+        properties: { id: p.id, name: p.name, acreage: p.acreage },
+      }));
+
+    map.getSource("search-results").setData({
+      type: "FeatureCollection",
+      features,
+    });
+  }, [searchResults]);
 
   useImperativeHandle(ref, () => ({
     flyTo(lng, lat, zoom = 16) {
@@ -155,7 +191,6 @@ const MapView = forwardRef(function MapView(
     cancelAreaSelect() {
       areaSelect.cancel();
     },
-
   }));
 
   // Applies a group's on/off state to its underlying maplibre layers.
@@ -215,6 +250,24 @@ const MapView = forwardRef(function MapView(
     map.addControl(new maplibregl.NavigationControl(), "bottom-right");
 
     map.on("load", () => {
+      // in the same map.on("load", ...) block where other sources are added
+      map.addSource("search-results", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+
+      map.addLayer({
+        id: "search-results-point",
+        type: "circle",
+        source: "search-results",
+        paint: {
+          "circle-radius": 7,
+          "circle-color": "#e6161396",
+          "circle-stroke-color": "#000",
+          "circle-stroke-width": 1.5,
+        },
+      });
+
       map.addSource("cities", {
         type: "vector",
         tiles: [`${window.location.origin}/api/tiles/cities/{z}/{x}/{y}.pbf`],

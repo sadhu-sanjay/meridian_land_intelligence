@@ -20,6 +20,35 @@ export default function Page() {
   const [selectedArea, setSelectedArea] = useState("");
   const [mapSelectActive, setMapSelectActive] = useState(false);
   const [mapAreaSelection, setMapAreaSelection] = useState(null); // { corners, acres, sqft } | null
+  // Holds the last search result: null until a search has actually run.
+  // Once it has a value, it's always shaped { count, parcels }.
+  const [searchResults, setSearchResults] = useState(null);
+
+  // This function is passed to <Sidebar onSearch={...}> — Sidebar calls it
+  // with { searchValue, quickFilters, sizeFilter } whenever the Search
+  // button is clicked (see Sidebar's handleSearchClick).
+  const handleSearch = async ({ quickFilters, sizeFilter }) => {
+    // Guard clause: if the user hasn't drawn an area yet
+    if (!mapAreaSelection?.corners) return;
+
+    try {
+      const res = await fetch("/api/parcels/within", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }, // tells the server to expect JSON
+        body: JSON.stringify({
+          corners: mapAreaSelection.corners, // the drawn shape, stored earlier
+          sizeFilter, // passed straight through from Sidebar
+          quickFilters, // same
+        }),
+      });
+
+      const data = await res.json(); // shape: { count, parcels } or { error }
+
+      setSearchResults(data);
+    } catch (err) {
+      console.error("search failed:", err);
+    }
+  };
 
   const handleAreaSelectComplete = (corners) => {
     const stats = computeAreaStats(corners);
@@ -103,6 +132,7 @@ export default function Page() {
           onMapSelectToggle={handleMapSelectToggle}
           mapAreaSelection={mapAreaSelection}
           onClearMapSelection={handleClearMapSelection}
+          onSearch={handleSearch}
         />
 
         <div className="map-area">
@@ -120,6 +150,7 @@ export default function Page() {
             onError={setLoadError}
             onAreaSelect={handleAreaSelectComplete}
             onAreaSelectStateChange={handleAreaSelectStateChange}
+            searchResults={searchResults}
           />
 
           <InfoCard info={hovered} />

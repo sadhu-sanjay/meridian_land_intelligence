@@ -52,7 +52,7 @@ export default function Sidebar({
   // Uncontrolled fallback so this renders standalone before it's wired
   // up to page.js state.
   const [localQuickFilters, setLocalQuickFilters] = useState([]);
-  const [localValue, setLocalValue] = useState("600");
+  const [localValue, setLocalValue] = useState("5000");
   const [localArea, setLocalArea] = useState("");
   const [localMapSelectActive, setLocalMapSelectActive] = useState(false);
 
@@ -154,6 +154,7 @@ export default function Sidebar({
             value={searchValue}
             onChange={onSearchChange}
             onSelect={onSearchSelect}
+
           />
         </div>
       </div>
