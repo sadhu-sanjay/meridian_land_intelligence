@@ -23,6 +23,7 @@ export default function Page() {
   // Holds the last search result: null until a search has actually run.
   // Once it has a value, it's always shaped { count, parcels }.
   const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   // This function is passed to <Sidebar onSearch={...}> — Sidebar calls it
   // with { searchValue, quickFilters, sizeFilter } whenever the Search
@@ -31,6 +32,7 @@ export default function Page() {
     // Guard clause: if the user hasn't drawn an area yet
     if (!mapAreaSelection?.corners) return;
 
+    setSearchLoading(true);
     try {
       const res = await fetch("/api/parcels/within", {
         method: "POST",
@@ -47,6 +49,8 @@ export default function Page() {
       setSearchResults(data);
     } catch (err) {
       console.error("search failed:", err);
+    } finally {
+      setSearchLoading(false);
     }
   };
 
@@ -133,6 +137,7 @@ export default function Page() {
           mapAreaSelection={mapAreaSelection}
           onClearMapSelection={handleClearMapSelection}
           onSearch={handleSearch}
+          searchLoading={searchLoading}
         />
 
         <div className="map-area">

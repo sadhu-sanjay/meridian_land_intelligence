@@ -48,6 +48,7 @@ export default function Sidebar({
   onSearch,
   mapAreaSelection, // { acres, sqft } | null — persists after drawing completes
   onClearMapSelection,
+  searchLoading,
 }) {
   // Uncontrolled fallback so this renders standalone before it's wired
   // up to page.js state.
@@ -113,7 +114,7 @@ export default function Sidebar({
   }, [value]);
 
   const handleSearchClick = () => {
-    if (!onSearch) return;
+    if (!onSearch || searchLoading) return;
     onSearch({
       searchValue,
       quickFilters,
@@ -154,13 +155,11 @@ export default function Sidebar({
             value={searchValue}
             onChange={onSearchChange}
             onSelect={onSearchSelect}
-
           />
         </div>
       </div>
 
       <aside className="sidebar">
-
         <div className="sidebar-header">
           <h3 className="sidebar-title">Find Parcels</h3>
         </div>
@@ -293,8 +292,17 @@ export default function Sidebar({
             type="button"
             className="sidebar-search-btn"
             onClick={handleSearchClick}
+            disabled={searchLoading}
+            aria-busy={searchLoading}
           >
-            Search
+            {searchLoading ? (
+              <>
+                <span className="sidebar-search-spinner" aria-hidden="true" />
+                Searching…
+              </>
+            ) : (
+              "Search"
+            )}
           </button>
         </div>
       </aside>

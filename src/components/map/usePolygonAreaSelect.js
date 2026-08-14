@@ -134,7 +134,7 @@ export function usePolygonAreaSelect({ mapRef, onComplete }) {
         type: "line",
         source: SRC_LINE,
         paint: {
-          "line-color": "#c9922f",
+          "line-color": "#ad0101",
           "line-width": 2,
           "line-dasharray": [2, 1],
         },
