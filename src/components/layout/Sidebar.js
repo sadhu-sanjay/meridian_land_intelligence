@@ -173,16 +173,15 @@ export default function Sidebar({
 
       <aside className="sidebar">
         <div className="sidebar-header">
-          {/* <h3 className="sidebar-title">Find Parcels</h3> */}
-          <p className={`eyebrow`} >Find parcel</p>
-          { searchValue &&
+          <h3 className="sidebar-title">Find Parcels</h3>
+          {/* <p className={`eyebrow`} >Find parcel</p> */}
           <button
             type="button"
-            className="sidebar-clear-all-btn"
+            className="sidebar-clear-all-btn "
             onClick={handleClearAll}
           >
-            Clear All ✕
-          </button>}
+            Clear All
+          </button>
         </div>
 
         {/* Area — pick a city, or draw one on the map. Mutually exclusive. */}
