@@ -158,9 +158,9 @@ export default function Sidebar({
       `}</style>
 
       <div className="area-search-float">
-        {/* <p className="eyebrow">Area</p>
-        <p className="section-hint">
-          Search a city, neighborhood, or address — e.g. Bellingham.
+        <p className="eyebrow">Search parcel</p>
+        {/* <p className="section-hint">
+          Search parcel
         </p> */}
         <div className="searchrow">
           <SearchBar
@@ -173,14 +173,16 @@ export default function Sidebar({
 
       <aside className="sidebar">
         <div className="sidebar-header">
-          <h3 className="sidebar-title">Find Parcels</h3>
+          {/* <h3 className="sidebar-title">Find Parcels</h3> */}
+          <p className={`eyebrow`} >Find parcel</p>
+          { searchValue &&
           <button
             type="button"
             className="sidebar-clear-all-btn"
             onClick={handleClearAll}
           >
             Clear All ✕
-          </button>
+          </button>}
         </div>
 
         {/* Area — pick a city, or draw one on the map. Mutually exclusive. */}
