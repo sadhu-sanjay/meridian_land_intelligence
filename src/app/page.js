@@ -25,7 +25,6 @@ export default function Page() {
   const [searchResults, setSearchResults] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
 
-
   // Picking a city from the dropdown and drawing an area on the map are
   // mutually exclusive ways of saying "where to search" — picking one
   // clears the other.
@@ -74,6 +73,7 @@ export default function Page() {
     const stats = computeAreaStats(corners);
     setMapAreaSelection({ corners, ...stats });
     setMapSelectActive(false);
+    setSearchResults(null); // new area drawn — old results/dots no longer apply
   };
   const handleClearMapSelection = () => {
     setMapAreaSelection(null);
@@ -155,7 +155,7 @@ export default function Page() {
           onSearch={handleSearch}
           searchLoading={searchLoading}
           onClearSearch={handleClearSearch}
-                    searchResults={searchResults}
+          searchResults={searchResults}
         />
 
         <div className="map-area">
