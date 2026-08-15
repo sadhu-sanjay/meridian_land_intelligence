@@ -50,6 +50,7 @@ export default function Sidebar({
   onClearMapSelection,
   searchLoading,
   onClearSearch,
+  searchResults,
 }) {
   // Uncontrolled fallback so this renders standalone before it's wired
   // up to page.js state.
@@ -178,7 +179,7 @@ export default function Sidebar({
             className="sidebar-clear-all-btn"
             onClick={handleClearAll}
           >
-             Clear All ✕
+            Clear All ✕
           </button>
         </div>
 
@@ -322,6 +323,20 @@ export default function Sidebar({
               "Search"
             )}
           </button>
+
+          {!searchLoading && searchResults && (
+            <p
+              className={`sidebar-search-summary${
+                searchResults.count === 0
+                  ? " sidebar-search-summary--empty"
+                  : ""
+              }`}
+            >
+              {searchResults.count === 0
+                ? "No parcels found in this area. Try a different city, a larger drawn area, or loosening your filters."
+                : `${searchResults.count.toLocaleString()} parcel${searchResults.count === 1 ? "" : "s"} found.`}
+            </p>
+          )}
         </div>
       </aside>
     </>

@@ -155,6 +155,7 @@ export default function Page() {
           onSearch={handleSearch}
           searchLoading={searchLoading}
           onClearSearch={handleClearSearch}
+                    searchResults={searchResults}
         />
 
         <div className="map-area">
