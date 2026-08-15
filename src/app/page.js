@@ -25,6 +25,18 @@ export default function Page() {
   const [searchResults, setSearchResults] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
 
+
+  // Picking a city from the dropdown and drawing an area on the map are
+  // mutually exclusive ways of saying "where to search" — picking one
+  // clears the other.
+  const handleAreaChange = (nextArea) => {
+    setSelectedArea(nextArea);
+    if (nextArea) {
+      setMapAreaSelection(null);
+      mapViewRef.current?.cancelAreaSelect();
+    }
+  };
+
   const handleClearSearch = () => {
     setSearchValue("");
     setSearchResults(null);
@@ -34,23 +46,22 @@ export default function Page() {
   // with { searchValue, quickFilters, sizeFilter } whenever the Search
   // button is clicked (see Sidebar's handleSearchClick).
   const handleSearch = async ({ quickFilters, sizeFilter }) => {
-    // Guard clause: if the user hasn't drawn an area yet
-    if (!mapAreaSelection?.corners) return;
+    // Need either a city picked from the dropdown or a drawn map area.
+    if (!selectedArea && !mapAreaSelection?.corners) return;
 
     setSearchLoading(true);
     try {
       const res = await fetch("/api/parcels/within", {
         method: "POST",
-        headers: { "Content-Type": "application/json" }, // tells the server to expect JSON
-        body: JSON.stringify({
-          corners: mapAreaSelection.corners, // the drawn shape, stored earlier
-          sizeFilter, // passed straight through from Sidebar
-          quickFilters, // same
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          selectedArea
+            ? { cityId: selectedArea, sizeFilter, quickFilters }
+            : { corners: mapAreaSelection.corners, sizeFilter, quickFilters },
+        ),
       });
 
-      const data = await res.json(); // shape: { count, parcels } or { error }
-
+      const data = await res.json();
       setSearchResults(data);
     } catch (err) {
       console.error("search failed:", err);
@@ -136,7 +147,7 @@ export default function Page() {
           onSearchSelect={handleSearchSelect}
           areaOptions={areaOptions}
           selectedArea={selectedArea}
-          onAreaChange={setSelectedArea}
+          onAreaChange={handleAreaChange}
           mapSelectActive={mapSelectActive}
           onMapSelectToggle={handleMapSelectToggle}
           mapAreaSelection={mapAreaSelection}
